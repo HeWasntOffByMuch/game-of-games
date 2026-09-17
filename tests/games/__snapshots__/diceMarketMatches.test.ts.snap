@@ -6,9 +6,9 @@ exports[`Dice Market Matches > play > plays out exactly as recorded 1`] = `
    p1 dice 8 [6,2]
    p2 dice 7 [4,3]
    p3 dice 9 [4,5]
-   offer t1p0 Leaf 10 (needs 10)
-   offer t1p1 Moon 5 (needs 5)
-   offer t1p2 Star 9 (needs 9)
+   offer t1p0 Leaf (needs 10)
+   offer t1p1 Moon (needs 5)
+   offer t1p2 Star (needs 9)
    p1 claims t1p1 with 8
    p2 claims t1p1 with 7
    p3 claims t1p1 with 9
@@ -20,9 +20,9 @@ exports[`Dice Market Matches > play > plays out exactly as recorded 1`] = `
    p1 dice 4 [2,2]
    p2 dice 2 [1,1]
    p3 dice 3 [1,2]
-   offer t2p0 Moon 8 (needs 8)
-   offer t2p1 Leaf 9 (needs 9)
-   offer t2p2 Star 5 (needs 5)
+   offer t2p0 Moon (needs 8)
+   offer t2p1 Leaf (needs 9)
+   offer t2p2 Star (needs 5)
    p1 passes
    p2 passes
    p3 passes
@@ -33,9 +33,9 @@ exports[`Dice Market Matches > play > plays out exactly as recorded 1`] = `
    p1 dice 6 [2,4]
    p2 dice 10 [4,6]
    p3 dice 12 [6,6]
-   offer t3p0 Star 8 (needs 8)
-   offer t3p1 Moon 7 (needs 7)
-   offer t3p2 Leaf 4 (needs 4)
+   offer t3p0 Star (needs 8)
+   offer t3p1 Moon (needs 7)
+   offer t3p2 Leaf (needs 4)
    p1 claims t3p2 with 6
    p2 claims t3p2 with 10
    p3 claims t3p2 with 12
@@ -47,9 +47,9 @@ exports[`Dice Market Matches > play > plays out exactly as recorded 1`] = `
    p1 dice 10 [6,4]
    p2 dice 6 [3,3]
    p3 dice 7 [5,2]
-   offer t4p0 Leaf 5 (needs 5)
-   offer t4p1 Star 9 (needs 9)
-   offer t4p2 Moon 7 (needs 7)
+   offer t4p0 Leaf (needs 5)
+   offer t4p1 Star (needs 9)
+   offer t4p2 Moon (needs 7)
    p1 claims t4p0 with 10
    p2 claims t4p0 with 6
    p3 claims t4p0 with 7
@@ -61,9 +61,9 @@ exports[`Dice Market Matches > play > plays out exactly as recorded 1`] = `
    p1 dice 6 [5,1]
    p2 dice 10 [4,6]
    p3 dice 9 [3,6]
-   offer t5p0 Leaf 8 (needs 8)
-   offer t5p1 Moon 5 (needs 5)
-   offer t5p2 Star 6 (needs 6)
+   offer t5p0 Leaf (needs 8)
+   offer t5p1 Moon (needs 5)
+   offer t5p2 Star (needs 6)
    p1 claims t5p1 with 6
    p2 claims t5p1 with 10
    p3 claims t5p1 with 9
@@ -75,9 +75,9 @@ exports[`Dice Market Matches > play > plays out exactly as recorded 1`] = `
    p1 dice 3 [2,1]
    p2 dice 6 [2,4]
    p3 dice 7 [4,3]
-   offer t6p0 Star 8 (needs 8)
-   offer t6p1 Leaf 6 (needs 6)
-   offer t6p2 Moon 7 (needs 7)
+   offer t6p0 Star (needs 8)
+   offer t6p1 Leaf (needs 6)
+   offer t6p2 Moon (needs 7)
    p1 passes
    p2 claims t6p1 with 6
    p3 claims t6p1 with 7

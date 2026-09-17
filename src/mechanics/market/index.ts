@@ -49,7 +49,7 @@ export const market = defineMechanic<MarketParams, Record<string, never>>({
       prices.forEach((price, index) => {
         const symbol = symbols[index] ?? ctx.params.symbols[0] ?? 'Moon';
         ctx.verbs.offerPrize({
-          label: `${symbol} ${price}`,
+          label: symbol,
           value: price,
           minStrength: price,
           payload: { kind: 'card', card: { id: `c${ctx.turn}-${index}`, symbol } },
