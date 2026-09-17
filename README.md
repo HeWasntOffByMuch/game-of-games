@@ -23,6 +23,11 @@ The hot-seat app is deployed from `main` on every push:
 That is all a playtest needs - one laptop, that link, and
 `docs/PLAYTEST.md`.
 
+The deploy workflow (`.github/workflows/deploy.yml`) typechecks, tests, builds
+and publishes on every push to `main`. It needs Pages switched on once, under
+**Settings -> Pages -> Source: GitHub Actions** - `GITHUB_TOKEN` is not allowed
+to set that itself.
+
 ## Running it locally
 
 ```

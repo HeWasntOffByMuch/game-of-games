@@ -21,9 +21,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -34,17 +34,15 @@ jobs:
       - name: Typecheck and test
         run: npm run check
 
-      - name: Configure Pages
-        id: pages
-        uses: actions/configure-pages@v5
-        with:
-          # Turns Pages on for the repository the first time this runs.
-          enablement: true
-
+      # Pages serves a project site from /<repo>/, so the built asset URLs
+      # need that prefix. Taken from the repository name rather than the Pages
+      # API: GITHUB_TOKEN cannot read or create the Pages site on a repo where
+      # Pages has not been switched on by hand, and the build should not need
+      # to. (A <user>.github.io repo would want BASE_PATH=/ instead.)
       - name: Build
         run: npm run build
         env:
-          BASE_PATH: ${{ steps.pages.outputs.base_path }}
+          BASE_PATH: /${{ github.event.repository.name }}/
 
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -57,5 +55,8 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # Requires Pages to be on, with Settings -> Pages -> Source set to
+      # "GitHub Actions". That is a one-time switch; GITHUB_TOKEN is not
+      # allowed to set it.
       - id: deployment
         uses: actions/deploy-pages@v4
