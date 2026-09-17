@@ -109,6 +109,11 @@ export interface MechanicMeta {
    * quietly goes back to normal, e.g. "Highest number wins again."
    */
   onRemoveLine?: string;
+  /**
+   * Number providers only: what players call the value, e.g. "dice" or "bid".
+   * Used when two providers combine and the teach text has to say so.
+   */
+  numberNoun?: string;
   conflicts: string[];
   /** Order within a hook point; lower runs first. */
   priority: number;

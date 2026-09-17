@@ -84,6 +84,12 @@ export interface InputSpec {
   strength: number;
   strengthParts: Array<{ source: MechanicId; value: number; parts: number[] }>;
   prizes: PrizeOption[];
+  /**
+   * True when there is only one prize, so there is nothing to pick between.
+   * Entering the contest is then the mechanic's own input - Bidding's "0 sits
+   * out" - and the frame claims the sole prize automatically.
+   */
+  autoClaim: boolean;
   prepare: InputField[];
   commit: InputField[];
 }

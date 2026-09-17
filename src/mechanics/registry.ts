@@ -1,7 +1,9 @@
 import type { AnyMechanic } from '../frame/mechanic';
+import { bidding } from './bidding';
 import { dice } from './dice';
 import { lowestWins } from './lowestWins';
 import { market } from './market';
+import { pot } from './pot';
 import { reroll } from './reroll';
 import { threeOfAKind } from './threeOfAKind';
 
@@ -12,6 +14,8 @@ export const MECHANICS: Record<string, AnyMechanic> = {
   [threeOfAKind.meta.id]: threeOfAKind,
   [reroll.meta.id]: reroll,
   [lowestWins.meta.id]: lowestWins,
+  [pot.meta.id]: pot,
+  [bidding.meta.id]: bidding,
 };
 
 export function mechanicFor(id: string): AnyMechanic {

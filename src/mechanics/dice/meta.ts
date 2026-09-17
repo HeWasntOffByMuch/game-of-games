@@ -7,6 +7,7 @@ export const diceMeta: MechanicMeta = {
   tip: 'Aim low rolls at prizes nobody else wants.',
   roles: ['contest'],
   provides: [{ type: 'number', attrs: { random: true } }],
+  numberNoun: 'dice',
   consumes: [],
   hooks: ['turnStart'],
   input: null,

@@ -28,7 +28,10 @@ export interface PlayerSeed {
 
 export interface RoundOptions {
   seed: string;
-  /** Hook-ordered; the assembler produces this list. */
+  /**
+   * In the order mechanics entered the game. The round dispatches hooks by
+   * declared priority, but reports and logs keep the order players built.
+   */
   mechanics: AnyMechanic[];
   players: PlayerSeed[];
   /** Shallow overrides per mechanic id, merged onto that mechanic's defaults. */
@@ -62,6 +65,8 @@ export class Round {
   readonly numbers = new NumberPort();
 
   private readonly slots: MechanicSlot[];
+  /** The same slots, ordered by declared priority: the hook dispatch order. */
+  private readonly dispatchOrder: MechanicSlot[];
   private readonly byId = new Map<MechanicId, MechanicSlot>();
   private readonly seed: string;
 
@@ -131,6 +136,11 @@ export class Round {
       this.byId.set(mechanic.meta.id, slot);
       return slot;
     });
+
+    this.dispatchOrder = this.slots
+      .map((slot, index) => ({ slot, index }))
+      .sort((a, b) => a.slot.mechanic.meta.priority - b.slot.mechanic.meta.priority || a.index - b.index)
+      .map((entry) => entry.slot);
   }
 
   get phase(): RoundPhase {
@@ -170,7 +180,7 @@ export class Round {
       players: this.players.map((p) => p.id),
       seed: this.seed,
     });
-    for (const slot of this.slots) {
+    for (const slot of this.dispatchOrder) {
       this.withMechanic(slot, () => slot.mechanic.setup?.(this.contextFor(slot)));
     }
     this.beginTurn();
@@ -221,6 +231,7 @@ export class Round {
       strength,
       strengthParts: contributions.map((c) => ({ source: c.source, value: c.value, parts: c.parts })),
       prizes,
+      autoClaim: this.prizeList.length === 1,
       prepare,
       commit,
     };
@@ -249,7 +260,10 @@ export class Round {
     if (input.prize !== null && !this.prizeList.some((p) => p.id === input.prize)) {
       throw new Error(`No such prize: ${input.prize}`);
     }
-    this.inputs.set(player, input);
+    // With one prize there is nothing to pick between, so entering the
+    // contest is the whole decision. A strength of 0 still sits the turn out.
+    const sole = this.prizeList.length === 1 ? this.prizeList[0]?.id ?? null : null;
+    this.inputs.set(player, { ...input, prize: input.prize ?? sole });
 
     const spec = this.specFor(player);
     for (const field of spec.commit) {
@@ -298,7 +312,7 @@ export class Round {
           prize,
           strength: resolution.winner.strength,
         };
-        for (const slot of this.slots) {
+        for (const slot of this.dispatchOrder) {
           this.withMechanic(slot, () => slot.mechanic.hooks.onWin?.(this.contextFor(slot), win));
         }
       }
@@ -384,7 +398,7 @@ export class Round {
 
   private dispatch(hook: HookPoint): void {
     if (!HOOK_ORDER.includes(hook)) throw new Error(`Unknown hook: ${hook}`);
-    for (const slot of this.slots) {
+    for (const slot of this.dispatchOrder) {
       const handler = slot.mechanic.hooks[hook];
       if (hook === 'onWin' || !handler) continue;
       this.withMechanic(slot, () => (handler as (ctx: MechanicContext<unknown, unknown>) => void)(this.contextFor(slot)));

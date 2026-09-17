@@ -36,6 +36,9 @@ interface TemplateContext {
   feeds(from: string, to: string): boolean;
   modifies(from: string, to: string): boolean;
   feedsAnyPrize(from: string): boolean;
+  /** Number providers in entry order. Several of them sum, per the grammar. */
+  numberProviders: MechanicMeta[];
+  soleNumberProvider(id: string): boolean;
 }
 
 interface ConnectionTemplate {
@@ -56,12 +59,12 @@ const CONNECTION_TEMPLATES: readonly ConnectionTemplate[] = [
   {
     owner: 'dice',
     line: 'Your dice total is your number.',
-    applies: (ctx) => ctx.feedsAnyPrize('dice'),
+    applies: (ctx) => ctx.feedsAnyPrize('dice') && ctx.soleNumberProvider('dice'),
   },
   {
     owner: 'bidding',
     line: 'Your bid is your number.',
-    applies: (ctx) => ctx.feedsAnyPrize('bidding'),
+    applies: (ctx) => ctx.feedsAnyPrize('bidding') && ctx.soleNumberProvider('bidding'),
   },
   {
     owner: 'threeOfAKind',
@@ -76,7 +79,7 @@ const CONNECTION_TEMPLATES: readonly ConnectionTemplate[] = [
   {
     owner: 'lowestWins',
     line: 'The lowest bid wins, and still pays.',
-    applies: (ctx) => ctx.has('bidding'),
+    applies: (ctx) => ctx.has('bidding') && ctx.soleNumberProvider('bidding'),
   },
   {
     owner: 'lowestWins',
@@ -94,6 +97,9 @@ function templateContext(metas: readonly MechanicMeta[], edges: readonly Edge[])
 
   const feeds = (from: string, to: string): boolean =>
     between.some((e) => e.kind === 'feeds' && e.from === from && e.to === to);
+  const numberProviders = metas.filter((m) =>
+    m.provides.some((p) => portTypes(p).includes('number')),
+  );
 
   return {
     has: (id) => ids.has(id),
@@ -101,7 +107,27 @@ function templateContext(metas: readonly MechanicMeta[], edges: readonly Edge[])
     modifies: (from, to) =>
       between.some((e) => e.kind === 'modifies' && e.from === from && e.to === to),
     feedsAnyPrize: (from) => prizeMechanics.some((prize) => feeds(from, prize)),
+    numberProviders,
+    soleNumberProvider: (id) =>
+      numberProviders.length === 1 && numberProviders[0]?.id === id,
   };
+}
+
+/**
+ * When two mechanics both provide a number, the grammar's combine rule sums
+ * them. Saying so is the one line that matters, and it outranks whatever
+ * either mechanic would otherwise say about itself - otherwise a perfectly
+ * legal mutation would teach a rule that is not true.
+ */
+function combinedNumberLine(mechanic: string, ctx: TemplateContext): string | undefined {
+  const providers = ctx.numberProviders;
+  if (providers.length < 2) return undefined;
+  const index = providers.findIndex((meta) => meta.id === mechanic);
+  if (index < 1) return undefined;
+  const first = providers[0];
+  const self = providers[index];
+  if (!first?.numberNoun || !self?.numberNoun) return undefined;
+  return `Your ${self.numberNoun} adds to your ${first.numberNoun}.`;
 }
 
 export function connectionLineFor(
@@ -110,6 +136,8 @@ export function connectionLineFor(
   edges: readonly Edge[],
 ): string | undefined {
   const ctx = templateContext(metas, edges);
+  const combined = combinedNumberLine(mechanic, ctx);
+  if (combined) return combined;
   return CONNECTION_TEMPLATES.find(
     (template) => template.owner === mechanic && template.applies(ctx),
   )?.line;

@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`Just Enough > Reroll in play > plays out exactly as recorded 1`] = `
-"== dice + market + reroll + lowestWins + threeOfAKind | seed golden-2 | p1, p2, p3
+"== dice + market + threeOfAKind + reroll + lowestWins | seed golden-2 | p1, p2, p3
 -- turn 1
    p1 dice 6 [2,4]
    p2 dice 7 [5,2]

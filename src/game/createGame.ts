@@ -26,8 +26,8 @@ export function createGame(setup: GameSetup): Game {
   const assembled = assembleOrThrow(setup.ids, CATALOGUE);
   const round = new Round({
     seed: setup.seed,
-    // Hook dispatch follows declared priority, not the order players added them.
-    mechanics: mechanicsFor(assembled.order),
+    // Entry order; the round dispatches hooks by declared priority itself.
+    mechanics: mechanicsFor(assembled.ids),
     players: setup.players,
     ...(setup.params ? { params: setup.params } : {}),
     ...(setup.maxTurns === undefined ? {} : { maxTurns: setup.maxTurns }),

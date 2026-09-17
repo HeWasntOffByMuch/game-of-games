@@ -1,7 +1,9 @@
 import type { MechanicMeta } from '../grammar/ports';
+import { biddingMeta } from './bidding/meta';
 import { diceMeta } from './dice/meta';
 import { lowestWinsMeta } from './lowestWins/meta';
 import { marketMeta } from './market/meta';
+import { potMeta } from './pot/meta';
 import { rerollMeta } from './reroll/meta';
 import { threeOfAKindMeta } from './threeOfAKind/meta';
 
@@ -18,6 +20,8 @@ export const CATALOGUE: readonly MechanicMeta[] = [
   threeOfAKindMeta,
   rerollMeta,
   lowestWinsMeta,
+  potMeta,
+  biddingMeta,
 ];
 
 export function metaFor(id: string): MechanicMeta {

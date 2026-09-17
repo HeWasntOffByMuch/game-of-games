@@ -48,8 +48,8 @@ describe('Round', () => {
     expect(round.standings()[0]).toEqual({ player: 'p2', points: 3, rank: 1 });
   });
 
-  it('records a pass instead of a claim', () => {
-    const round = makeRound();
+  it('records a pass instead of a claim when there is a choice of prize', () => {
+    const round = makeRound({ params: { fixedNumbers: { values: { p1: 4, p2: 9, p3: 7 } }, pointPrizes: { values: [3, 5] } } });
     round.begin();
     const prizeId = round.prizes[0]!.id;
     playTurn(round, { p1: null, p2: prizeId, p3: null });
@@ -57,6 +57,31 @@ describe('Round', () => {
     const passes = round.log.ofType('pass').map((e) => e.player);
     expect(passes).toEqual(['p1', 'p3']);
     expect(round.log.ofType('claim')).toHaveLength(1);
+  });
+
+  describe('with only one prize', () => {
+    it('claims it automatically, because there is nothing to pick between', () => {
+      const round = makeRound();
+      round.begin();
+      expect(round.specFor('p1').autoClaim).toBe(true);
+      playTurn(round, {});
+      expect(round.log.ofType('claim')).toHaveLength(3);
+      expect(round.log.ofType('pass')).toHaveLength(0);
+    });
+
+    it('still sits out a player whose number is 0', () => {
+      const round = makeRound({ params: { fixedNumbers: { values: { p1: 0, p2: 9, p3: 7 } } } });
+      round.begin();
+      playTurn(round, {});
+      expect(round.log.ofType('claimDropped')[0]).toMatchObject({ player: 'p1', reason: 'zero' });
+      expect(round.log.ofType('win')[0]?.player).toBe('p2');
+    });
+
+    it('asks players to pick once there is more than one prize', () => {
+      const round = makeRound({ params: { fixedNumbers: { values: { p1: 4, p2: 9, p3: 7 } }, pointPrizes: { values: [3, 5] } } });
+      round.begin();
+      expect(round.specFor('p1').autoClaim).toBe(false);
+    });
   });
 
   it('runs to the turn cap and then ends', () => {
