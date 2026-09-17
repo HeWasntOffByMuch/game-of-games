@@ -85,3 +85,57 @@ combined number distribution; that requires the simulator deferred in D2.
 ### D16. No networking, clients, or production infrastructure
 Deferred: WebSocket rooms, phone controllers, reconnection, QR joining, share codes, Hall of Fame,
 server architecture, scaffolding generators, art/audio, accounts, deployment.
+
+## P0 — decisions made during implementation
+
+These came out of writing and playing the code, not out of planning.
+
+### D17. With one prize, the frame claims it automatically
+`pickPrize` only exists when there is more than one prize. With a single prize —
+Lowest Unique Bid, for example — entering the contest *is* the mechanic's own input
+("0 sits out"), and the frame claims the sole prize for anyone whose number is above 0.
+**Why:** playing it showed the double decision was not just redundant but contradictory —
+a player could bid 4 and then pass, and the bid did nothing. R7 guarantees a single-prize
+game has a mechanic input, so nothing loses its decision.
+
+### D18. Market draws symbols with replacement; there is no finite deck
+v3 has matched cards return to the Market deck. The prototype's Market draws from a fixed
+symbol set each turn instead, so nothing has to hand cards back.
+**Why:** it removes an inter-mechanic dependency (Three of a Kind would have to give cards
+to Market) for no loss — the scarcity that matters is within a turn, where three offers
+are contested by everyone.
+
+### D19. Market offers three cards, one per symbol, priced 4–10
+Three symbols and three offers means every symbol is on sale every turn at a changing price.
+**Why:** it makes the denial race legible — you can always see which card someone needs —
+and across 40 seeds at 3–4 players it brings first points to a median of turn 4. Checked by
+running the headless game, not by the deferred simulator. Expect to change it after the
+first session.
+
+### D20. Two number providers teach the combined rule
+When a game has both Dice and Bidding, the grammar sums them, so the teach text says
+"Your bid adds to your dice" instead of each mechanic claiming to be the number.
+**Why:** `Dice out, Bidding in` is a legal mutation from the base game, and without this the
+generated rules would have stated something untrue. The connection templates now check
+whether a mechanic is the only number provider.
+
+### D21. Prepare choices are settled before the prize picker appears
+The UI hides the prize list until every enabled prepare field has been answered.
+**Why:** rerolling after picking could leave a player claiming a card they could no longer
+reach. It also matches v3's turn description: see your roll, reroll if you dare, then pick a
+card you can reach.
+
+### D22. Generated games are named by joining their mechanics
+"Dice + Market + Three of a Kind", not a generated name from v3's name fragments.
+**Why:** a bad generated name is worse than no name, and naming is not what the first
+playtest is testing.
+
+### D23. No automated browser test
+The hot-seat UI was verified by driving it in Chromium during development, but the repo
+keeps no browser-test dependency. The session state machine and the view functions are
+both plain functions, so the flow, the escaping and the disabled states are covered by
+ordinary tests.
+
+### D24. `roundEnd` reasons are `turnCap` and `stopped`
+v3's ending mechanics are deferred, so the second reason is a facilitator calling time
+during a playtest rather than a mechanic ending the round. The playtest log records which.

@@ -134,14 +134,11 @@ const actions: Record<string, (target: HTMLElement) => void> = {
   },
   fun: (target) => {
     session.rate({ fun: target.dataset.value === 'up' ? 'up' : 'down' });
-    save(session.record, localStorage);
   },
   clarity: (target) => {
     session.rate({ clarity: Number(target.dataset.value) });
-    save(session.record, localStorage);
   },
   mutate: () => {
-    save(session.record, localStorage);
     session.openMutations();
   },
   'apply-mutation': (target) => {
@@ -157,6 +154,9 @@ root.addEventListener('click', (event) => {
   const action = actions[target.dataset.action ?? ''];
   if (!action) return;
   action(target);
+  // A playtest is worth more than a tidy save path: keep the record current
+  // after every action, so closing the laptop loses nothing.
+  if (session.record.rounds.length > 0) save(session.record, localStorage);
   render();
 });
 

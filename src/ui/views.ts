@@ -448,6 +448,7 @@ export function resultsView(session: Session): string {
       </div>
 
       <button class="primary" data-action="mutate">Change the game</button>
+      <button class="quiet" data-action="download-log">Download the playtest log</button>
     </section>
   `;
 }
