@@ -113,3 +113,54 @@ export const addAmount = defineMechanic<{ max: number }, Record<string, never>>(
   },
   hooks: {},
 });
+
+/**
+ * A number provider whose redraws are scripted, so tests can put a modifier
+ * in an exact situation (a bust, a specific new total).
+ */
+export const scriptedNumbers = defineMechanic<
+  { values: Record<string, number>; redraws: Record<string, Array<{ value: number; parts: number[] }>> },
+  { used: Record<string, number> }
+>({
+  meta: stubMeta({ id: 'scriptedNumbers', roles: ['contest'], hooks: ['turnStart'] }),
+  defaultParams: { values: {}, redraws: {} },
+  createState: () => ({ used: {} }),
+  hooks: {
+    turnStart(ctx) {
+      for (const player of ctx.players) {
+        const value = ctx.params.values[player.id] ?? 0;
+        ctx.numbers.publish({
+          player: player.id,
+          source: ctx.id,
+          value,
+          parts: [value],
+          random: true,
+          redraw: () => {
+            const index = ctx.state.used[player.id] ?? 0;
+            ctx.state.used[player.id] = index + 1;
+            return ctx.params.redraws[player.id]?.[index] ?? { value, parts: [value] };
+          },
+        });
+      }
+    },
+  },
+});
+
+/** A number provider with no redraw, so modifiers that need one find nothing. */
+export const fixedChosenNumbers = defineMechanic<{ values: Record<string, number> }, Record<string, never>>({
+  meta: stubMeta({ id: 'fixedChosenNumbers', roles: ['contest'], hooks: ['turnStart'] }),
+  defaultParams: { values: {} },
+  createState: () => ({}),
+  hooks: {
+    turnStart(ctx) {
+      for (const player of ctx.players) {
+        ctx.numbers.publish({
+          player: player.id,
+          source: ctx.id,
+          value: ctx.params.values[player.id] ?? 0,
+          random: false,
+        });
+      }
+    },
+  },
+});

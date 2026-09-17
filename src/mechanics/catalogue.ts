@@ -1,6 +1,8 @@
 import type { MechanicMeta } from '../grammar/ports';
 import { diceMeta } from './dice/meta';
+import { lowestWinsMeta } from './lowestWins/meta';
 import { marketMeta } from './market/meta';
+import { rerollMeta } from './reroll/meta';
 import { threeOfAKindMeta } from './threeOfAKind/meta';
 
 /**
@@ -10,7 +12,13 @@ import { threeOfAKindMeta } from './threeOfAKind/meta';
  * Seven of v3's sixteen mechanics, chosen because they are the minimum that
  * produces the three target games (docs/DECISIONS.md D1).
  */
-export const CATALOGUE: readonly MechanicMeta[] = [diceMeta, marketMeta, threeOfAKindMeta];
+export const CATALOGUE: readonly MechanicMeta[] = [
+  diceMeta,
+  marketMeta,
+  threeOfAKindMeta,
+  rerollMeta,
+  lowestWinsMeta,
+];
 
 export function metaFor(id: string): MechanicMeta {
   const meta = CATALOGUE.find((entry) => entry.id === id);
