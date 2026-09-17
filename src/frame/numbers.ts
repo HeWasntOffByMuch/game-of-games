@@ -43,10 +43,18 @@ export interface PublishNumberOptions {
  * Combine rule from the grammar: several providers sum per player, and then
  * modifiers apply. An override (a Reroll bust) replaces the total outright.
  */
+export interface NumberListener {
+  published(contribution: NumberContribution): void;
+  replaced(contribution: NumberContribution, from: number, by: MechanicId): void;
+  overridden(player: PlayerId, from: number, to: number, by: MechanicId, note?: string): void;
+}
+
 export class NumberPort {
   private contributions: NumberContribution[] = [];
   private overrides = new Map<PlayerId, { value: number; source: MechanicId }>();
   private nextId = 0;
+  /** The frame listens so every change reaches the event log. */
+  listener: NumberListener | null = null;
 
   clear(): void {
     this.contributions = [];
@@ -67,6 +75,7 @@ export class NumberPort {
       ...(options.redraw ? { redraw: options.redraw } : {}),
     };
     this.contributions.push(contribution);
+    this.listener?.published(contribution);
     return contribution;
   }
 
@@ -83,14 +92,18 @@ export class NumberPort {
 
   /** Replaces one contribution's value, recording which mechanic did it. */
   replace(contribution: NumberContribution, draw: NumberDraw, by: MechanicId): void {
+    const from = contribution.value;
     contribution.value = draw.value;
     contribution.parts = draw.parts;
     contribution.modifiedBy.push(by);
+    this.listener?.replaced(contribution, from, by);
   }
 
   /** Overrides a player's whole number, e.g. a bust setting it to 0. */
-  override(player: PlayerId, value: number, by: MechanicId): void {
+  override(player: PlayerId, value: number, by: MechanicId, note?: string): void {
+    const from = this.total(player);
     this.overrides.set(player, { value, source: by });
+    this.listener?.overridden(player, from, value, by, note);
   }
 
   total(player: PlayerId): number {

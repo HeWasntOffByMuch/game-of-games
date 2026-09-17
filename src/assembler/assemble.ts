@@ -1,6 +1,6 @@
 import { deriveEdges, type Edge } from '../grammar/edges';
 import type { MechanicMeta, Role } from '../grammar/ports';
-import { coveredRoles, validate, type RuleFailure } from './rules';
+import { coveredRoles, describeFailure, validate, type RuleFailure } from './rules';
 import { measure, teachBlocks, type TeachBlock, type TeachBudget } from './teach';
 
 export interface AssembledGame {
@@ -84,7 +84,7 @@ export function assembleOrThrow(
 ): AssembledGame {
   const result = assemble(ids, catalogue);
   if (!result.ok) {
-    const reasons = result.failures.map((f) => `${f.rule}: ${f.message}`).join('; ');
+    const reasons = result.failures.map(describeFailure).join('; ');
     throw new Error(`Invalid game [${ids.join(', ')}] - ${reasons}`);
   }
   return result.game;

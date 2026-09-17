@@ -86,6 +86,39 @@ export class Round {
       cards: [],
     }));
 
+    this.numbers.listener = {
+      published: (contribution) =>
+        this.emit({
+          t: 'number',
+          turn: this.turnValue,
+          source: contribution.source,
+          player: contribution.player,
+          value: contribution.value,
+          parts: contribution.parts,
+        }),
+      replaced: (contribution, from, by) =>
+        this.emit({
+          t: 'numberChanged',
+          turn: this.turnValue,
+          source: by,
+          player: contribution.player,
+          from,
+          to: contribution.value,
+          parts: contribution.parts,
+        }),
+      overridden: (player, from, to, by, note) =>
+        this.emit({
+          t: 'numberChanged',
+          turn: this.turnValue,
+          source: by,
+          player,
+          from,
+          to,
+          parts: [],
+          ...(note === undefined ? {} : { note }),
+        }),
+    };
+
     const root = createRng(options.seed);
     this.slots = options.mechanics.map((mechanic) => {
       const params = { ...(mechanic.defaultParams as Record<string, unknown>), ...(options.params?.[mechanic.meta.id] ?? {}) };

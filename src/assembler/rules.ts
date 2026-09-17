@@ -16,6 +16,15 @@ export interface RuleFailure {
   candidates?: string[];
 }
 
+/** Developer-facing, and specific: "R2: market.card has no consumer (candidates: threeOfAKind)". */
+export function describeFailure(failure: RuleFailure): string {
+  const candidates =
+    failure.candidates && failure.candidates.length > 0
+      ? ` (candidates: ${failure.candidates.join(', ')})`
+      : '';
+  return `${failure.rule}: ${failure.message}${candidates}`;
+}
+
 export const MIN_MECHANICS = 2;
 export const MAX_MECHANICS = 6;
 
