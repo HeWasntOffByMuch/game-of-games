@@ -5,9 +5,14 @@ is about getting honest answers out of a table of people in about half an hour.
 
 ## Setting up
 
+Open **https://hewasntoffbymuch.github.io/game-of-games/** on one laptop. That is
+the whole setup - it is deployed from `main` on every push.
+
+To run it from a checkout instead:
+
 ```
 npm install
-npm run dev          # opens the hot-seat app
+npm run dev
 ```
 
 One laptop, 3-4 players sitting round it, someone facilitating. 2-6 works; 3-4 is

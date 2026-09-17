@@ -14,7 +14,16 @@ It is the smallest thing that can be put in front of people to find out whether
 the idea is fun. What was deliberately left out, and why, is in
 `docs/DECISIONS.md`.
 
-## Running it
+## Playing it
+
+The hot-seat app is deployed from `main` on every push:
+
+**https://hewasntoffbymuch.github.io/game-of-games/**
+
+That is all a playtest needs - one laptop, that link, and
+`docs/PLAYTEST.md`.
+
+## Running it locally
 
 ```
 npm install
