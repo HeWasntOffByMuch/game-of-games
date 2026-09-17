@@ -75,7 +75,12 @@ export type Role = 'stakes' | 'contest' | 'score';
 
 export const ROLES: readonly Role[] = ['stakes', 'contest', 'score'];
 
-export type InputKind = 'toggle' | 'pickAmount';
+/**
+ * `pickOne` picks from an explicit list of values. `pickAmount`'s min/max
+ * cannot express "2 or 5", which is exactly what choosing between two dice
+ * needs (playtest finding 1).
+ */
+export type InputKind = 'toggle' | 'pickAmount' | 'pickOne';
 
 export interface PlayerInputDecl {
   kind: InputKind;
@@ -109,6 +114,13 @@ export interface MechanicMeta {
    * quietly goes back to normal, e.g. "Highest number wins again."
    */
   onRemoveLine?: string;
+  /**
+   * Playtest knowledge, not a proof: below this many players the mechanic was
+   * found to be thin. Bidding with two players went solvable quickly, and
+   * prediction mechanics need several opponents to reason about. Advisory
+   * only - it never rejects a game (playtest finding 3).
+   */
+  minRecommendedPlayers?: number;
   /**
    * Number providers only: what players call the value, e.g. "dice" or "bid".
    * Used when two providers combine and the teach text has to say so.

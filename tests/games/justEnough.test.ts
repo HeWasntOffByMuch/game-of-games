@@ -17,14 +17,38 @@ const PLAYERS = [
   { id: 'p3', name: 'Cy' },
 ];
 
-/** Everyone goes for the same prize, so comparison decides the winner. */
+/**
+ * Everyone takes their biggest die and goes for the same prize, so the
+ * comparison alone decides the winner. Identical in both games, which is what
+ * makes the inversion comparison fair.
+ */
+const takeHighest = (spec: { prepare: Array<{ mechanic: string; kind: string; enabled: boolean; choices?: Array<{ value: number }> }> }): Record<string, number | boolean> => {
+  const values: Record<string, number | boolean> = {};
+  for (const field of spec.prepare) {
+    if (!field.enabled) continue;
+    values[field.mechanic] =
+      field.kind === 'pickOne' ? Math.max(...(field.choices ?? []).map((c) => c.value)) : false;
+  }
+  return values;
+};
+
 const claimFirst: Policy = {
+  prepare: (spec) => takeHighest(spec),
   commit: (spec) => ({ prize: spec.prizes[0]?.prize.id ?? null, values: {} }),
 };
 
-const neverReroll: Policy = {
-  prepare: () => ({ reroll: false }),
-  commit: claimFirst.commit,
+const neverReroll: Policy = claimFirst;
+
+/** Rerolls, then takes the biggest of whatever came up. */
+const alwaysReroll: Policy = {
+  prepare: (spec, player) => {
+    const values = takeHighest(spec) as Record<string, number | boolean>;
+    if (spec.prepare.some((field) => field.mechanic === 'reroll' && field.enabled)) {
+      values['reroll'] = true;
+    }
+    return values;
+  },
+  commit: (spec) => ({ prize: spec.prizes[0]?.prize.id ?? null, values: {} }),
 };
 
 describe('Just Enough', () => {
@@ -104,8 +128,7 @@ describe('Just Enough', () => {
         block.connection ? [`${block.heading}: ${block.teach}`, block.connection] : [`${block.heading}: ${block.teach}`],
       );
       expect(strip).toEqual([
-        'DICE: Everyone rolls two dice at the start of each turn.',
-        'Your dice total is your number.',
+        'DICE: Roll two dice. Choose one as your number.',
         "MARKET: Cards for sale each turn. Your number must reach a card's price.",
         'THREE OF A KIND: Three matching symbols score 5 points, then go back.',
         'Cards come from the Market.',
@@ -130,9 +153,11 @@ describe('Just Enough', () => {
     const base = { seed: 'inversion', players: PLAYERS, maxTurns: 8 };
 
     it('rolls identically in both games, because streams are per mechanic', () => {
-      const one = playGame({ ...base, ids: BASE }, claimFirst).round.log.ofType('number');
-      const two = playGame({ ...base, ids: [...BASE, 'lowestWins'] }, claimFirst).round.log.ofType('number');
-      expect(one.map((e) => e.value)).toEqual(two.map((e) => e.value));
+      const rolls = (ids: string[]): string[] =>
+        playGame({ ...base, ids }, claimFirst)
+          .round.log.ofType('number')
+          .map((e) => e.parts.join(','));
+      expect(rolls(BASE)).toEqual(rolls([...BASE, 'lowestWins']));
     });
 
     it('hands the same rolls to different winners once Lowest Wins is added', () => {
@@ -164,27 +189,30 @@ describe('Just Enough', () => {
     });
 
     it('makes a big roll a problem: it wins only when the small ones cancel', () => {
-      const { round } = playGame({ ...base, ids: JUST_ENOUGH }, neverReroll);
-      const prizes = new Map(round.log.ofType('prizeOffered').map((e) => [e.prize.id, e.prize]));
       let topRollWins = 0;
       let checked = 0;
 
-      for (const win of round.log.ofType('win')) {
-        const price = prizes.get(win.prize)?.minStrength ?? 0;
-        const qualifying = round.log
-          .ofType('claim')
-          .filter((c) => c.prize === win.prize && c.turn === win.turn && c.strength >= price);
-        if (qualifying.length < 2) continue;
-        checked += 1;
-        if (win.strength !== Math.max(...qualifying.map((c) => c.strength))) continue;
+      for (let seed = 0; seed < 12; seed += 1) {
+        const { round } = playGame({ ...base, seed: `inv${seed}`, ids: JUST_ENOUGH }, neverReroll);
+        const prizes = new Map(round.log.ofType('prizeOffered').map((e) => [e.prize.id, e.prize]));
 
-        // The only way the biggest number takes the prize is that everything
-        // below it tied and cancelled. Nothing authored that rule.
-        topRollWins += 1;
-        const cancelledBelow = round.log
-          .ofType('tieCancelled')
-          .filter((t) => t.prize === win.prize && t.turn === win.turn && t.strength < win.strength);
-        expect(cancelledBelow.length).toBeGreaterThan(0);
+        for (const win of round.log.ofType('win')) {
+          const price = prizes.get(win.prize)?.minStrength ?? 0;
+          const qualifying = round.log
+            .ofType('claim')
+            .filter((c) => c.prize === win.prize && c.turn === win.turn && c.strength >= price);
+          if (qualifying.length < 2) continue;
+          checked += 1;
+          if (win.strength !== Math.max(...qualifying.map((c) => c.strength))) continue;
+
+          // The only way the biggest number takes the prize is that everything
+          // below it tied and cancelled. Nothing authored that rule.
+          topRollWins += 1;
+          const cancelledBelow = round.log
+            .ofType('tieCancelled')
+            .filter((t) => t.prize === win.prize && t.turn === win.turn && t.strength < win.strength);
+          expect(cancelledBelow.length).toBeGreaterThan(0);
+        }
       }
 
       expect(checked).toBeGreaterThan(0);
@@ -196,20 +224,14 @@ describe('Just Enough', () => {
     const base = { seed: 'rerolling', ids: JUST_ENOUGH, players: PLAYERS, maxTurns: 8 };
 
     it('changes the game when used', () => {
-      const never = playGame(base, neverReroll).round.log.ofType('number').map((e) => e.value);
-      const always = playGame(base, {
-        prepare: () => ({ reroll: true }),
-        commit: claimFirst.commit,
-      }).round.log.ofType('numberChanged');
-      expect(always.length).toBeGreaterThan(0);
-      expect(never.length).toBeGreaterThan(0);
+      const never = playGame(base, neverReroll).round.log.ofType('number');
+      const always = playGame(base, alwaysReroll).round.log.ofType('numberChanged');
+      // A reroll shows up as a second change on top of choosing a die.
+      expect(always.length).toBeGreaterThan(never.length);
     });
 
     it('busts sometimes, and a bust never wins', () => {
-      const { round } = playGame({ ...base, maxTurns: 20 }, {
-        prepare: () => ({ reroll: true }),
-        commit: claimFirst.commit,
-      });
+      const { round } = playGame({ ...base, maxTurns: 20 }, alwaysReroll);
       const busts = round.log.ofType('numberChanged').filter((e) => e.note === 'bust');
       expect(busts.length).toBeGreaterThan(0);
       for (const bust of busts) {

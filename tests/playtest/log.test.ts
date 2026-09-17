@@ -1,23 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { load, newSession, save, toJsonl, type RoundRecord, type SessionRecord } from '../../src/playtest/log';
-
-function record(over: Partial<RoundRecord> = {}): RoundRecord {
-  return {
-    round: 1,
-    seed: 's-r1',
-    mechanics: ['dice', 'market', 'threeOfAKind'],
-    gameName: 'Dice + Market + Three of a Kind',
-    players: 3,
-    mutation: null,
-    turnsPlayed: 8,
-    endedBecause: 'turnCap',
-    durationMs: 132_000,
-    turnDurationsMs: [16_000, 15_000],
-    standings: [{ player: 'p1', points: 10, rank: 1 }],
-    winners: ['p1'],
-    ...over,
-  };
-}
+import { PlaytestLog, type PlaytestEvent } from '../../src/playtest/log';
 
 /** Enough of the Storage interface to test against, including a failing one. */
 function memoryStorage(broken = false): Storage {
@@ -40,55 +22,85 @@ function memoryStorage(broken = false): Storage {
   } as Storage;
 }
 
+function log(): PlaytestLog {
+  let time = 1_700_000_000_000;
+  return new PlaytestLog({ sessionId: 'test', now: () => (time += 1000) });
+}
+
 describe('playtest log', () => {
-  it('records one line per round, so sessions can be concatenated', () => {
-    const session: SessionRecord = { ...newSession(['Ada']), rounds: [record(), record({ round: 2 })] };
-    const lines = toJsonl(session).split('\n');
+  it('numbers events so chronological order survives equal timestamps', () => {
+    const playtest = log();
+    playtest.add({ t: 'sessionStart' });
+    playtest.add({ t: 'gameEnd', gameId: 'g1', reason: 'newGame' });
+    expect(playtest.all().map((event) => event.seq)).toEqual([1, 2]);
+    expect(playtest.all().every((event) => event.sessionId === 'test')).toBe(true);
+    expect(playtest.all()[0]?.at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it('writes one JSON object per line', () => {
+    const playtest = log();
+    playtest.add({ t: 'sessionStart' });
+    playtest.add({ t: 'gameEnd', gameId: 'g1', reason: 'newGame' });
+    const lines = playtest.toJsonl().split('\n');
     expect(lines).toHaveLength(2);
-    expect(JSON.parse(lines[0] as string)).toMatchObject({
-      sessionId: session.sessionId,
-      round: 1,
-      gameName: 'Dice + Market + Three of a Kind',
-      durationMs: 132_000,
-    });
+    expect((JSON.parse(lines[1] as string) as PlaytestEvent).t).toBe('gameEnd');
   });
 
-  it('keeps what a mutation changed, so round-to-round reads as a story', () => {
-    const session: SessionRecord = {
-      ...newSession(['Ada']),
-      rounds: [record(), record({ round: 2, mutation: { op: 'add', mechanic: 'reroll' }, fun: 'up', clarity: 4 })],
-    };
-    const second = JSON.parse(toJsonl(session).split('\n')[1] as string);
-    expect(second).toMatchObject({ mutation: { op: 'add', mechanic: 'reroll' }, fun: 'up', clarity: 4 });
+  it('counts games, rounds and turns for the tester', () => {
+    const playtest = log();
+    playtest.add({ t: 'sessionStart' });
+    playtest.add({ t: 'gameStart', gameId: 'g1', gameNumber: 1, gameName: 'X', mechanics: ['pot'], players: 3, playerNames: ['a', 'b', 'c'], maxTurns: 8, minRecommendedPlayers: 3 });
+    playtest.add({ t: 'turn', gameId: 'g1', roundId: 'g1r1', turn: 1, durationMs: 10, players: [], events: [], standings: [] });
+    playtest.add({ t: 'roundEnd', gameId: 'g1', roundId: 'g1r1', turnsPlayed: 1, durationMs: 10, endedBecause: 'turnCap', standings: [], winners: [] });
+    expect(playtest.summary).toEqual({ games: 1, rounds: 1, turns: 1 });
   });
 
-  it('round-trips through storage, keeping earlier sessions', () => {
+  it('is emptied only when asked', () => {
+    const playtest = log();
+    playtest.add({ t: 'sessionStart' });
+    playtest.add({ t: 'gameEnd', gameId: 'g1', reason: 'newGame' });
+    expect(playtest.size).toBe(2);
+    playtest.clear();
+    expect(playtest.size).toBe(0);
+    expect(playtest.toJsonl()).toBe('');
+  });
+
+  it('picks the same sitting back up after a refresh', () => {
     const storage = memoryStorage();
-    const first: SessionRecord = { ...newSession(['Ada']), sessionId: 'one', rounds: [record()] };
-    const second: SessionRecord = { ...newSession(['Bo']), sessionId: 'two', rounds: [record()] };
-    save(first, storage);
-    save(second, storage);
-    expect(load(storage).map((s) => s.sessionId)).toEqual(['one', 'two']);
+    const first = log();
+    first.add({ t: 'sessionStart' });
+    first.add({ t: 'gameEnd', gameId: 'g1', reason: 'newGame' });
+    first.save(storage);
+
+    const restored = PlaytestLog.restore(storage);
+    expect(restored?.sessionId).toBe('test');
+    expect(restored?.size).toBe(2);
+
+    // And keeps counting up rather than reusing sequence numbers.
+    restored?.add({ t: 'sessionStart' });
+    expect(restored?.all().at(-1)?.seq).toBe(3);
   });
 
-  it('replaces a session rather than duplicating it as rounds are added', () => {
+  it('forgets the stored copy when the tester clears it', () => {
     const storage = memoryStorage();
-    const session: SessionRecord = { ...newSession(['Ada']), sessionId: 'one', rounds: [record()] };
-    save(session, storage);
-    save({ ...session, rounds: [record(), record({ round: 2 })] }, storage);
-    const loaded = load(storage);
-    expect(loaded).toHaveLength(1);
-    expect(loaded[0]?.rounds).toHaveLength(2);
+    const playtest = log();
+    playtest.add({ t: 'sessionStart' });
+    playtest.save(storage);
+    PlaytestLog.forget(storage);
+    expect(PlaytestLog.restore(storage)).toBeNull();
   });
 
   it('never interrupts a playtest when storage is unavailable', () => {
     const broken = memoryStorage(true);
-    expect(() => save({ ...newSession(['Ada']), rounds: [record()] }, broken)).not.toThrow();
-    expect(load(broken)).toEqual([]);
+    const playtest = log();
+    playtest.add({ t: 'sessionStart' });
+    expect(() => playtest.save(broken)).not.toThrow();
+    expect(PlaytestLog.restore(broken)).toBeNull();
   });
 
-  it('starts empty', () => {
-    expect(newSession(['Ada', 'Bo']).rounds).toEqual([]);
-    expect(toJsonl(newSession(['Ada']))).toBe('');
+  it('ignores a corrupted stored copy rather than throwing', () => {
+    const storage = memoryStorage();
+    storage.setItem('house-rules.playtest', '{not json');
+    expect(PlaytestLog.restore(storage)).toBeNull();
   });
 });

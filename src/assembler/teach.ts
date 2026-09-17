@@ -57,11 +57,6 @@ interface ConnectionTemplate {
  */
 const CONNECTION_TEMPLATES: readonly ConnectionTemplate[] = [
   {
-    owner: 'dice',
-    line: 'Your dice total is your number.',
-    applies: (ctx) => ctx.feedsAnyPrize('dice') && ctx.soleNumberProvider('dice'),
-  },
-  {
     owner: 'bidding',
     line: 'Your bid is your number.',
     applies: (ctx) => ctx.feedsAnyPrize('bidding') && ctx.soleNumberProvider('bidding'),

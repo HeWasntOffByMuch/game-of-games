@@ -12,5 +12,8 @@ export const rerollMeta: MechanicMeta = {
   input: { kind: 'toggle', phase: 'prepare', hidden: false },
   costlyEntry: true,
   conflicts: [],
-  priority: 40,
+  // Asked before the number providers it modifies: rerolling replaces the
+  // dice a player would otherwise be choosing between. Reroll has no hooks,
+  // so this priority only orders the questions.
+  priority: 5,
 };

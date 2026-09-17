@@ -19,6 +19,25 @@ function reachable(spec: InputSpec): InputSpec['prizes'] {
   return spec.prizes.filter((option) => option.reachable);
 }
 
+/** Answers every prepare question a mechanic asks, picking by one rule. */
+function prepareWith(
+  spec: InputSpec,
+  choose: (values: number[]) => number,
+): Record<string, InputValue> {
+  const values: Record<string, InputValue> = {};
+  for (const field of spec.prepare) {
+    if (!field.enabled) continue;
+    if (field.kind === 'pickOne' && field.choices && field.choices.length > 0) {
+      values[field.mechanic] = choose(field.choices.map((choice) => choice.value));
+    } else if (field.kind === 'toggle') {
+      values[field.mechanic] = false;
+    } else {
+      values[field.mechanic] = field.min ?? 0;
+    }
+  }
+  return values;
+}
+
 function best(spec: InputSpec, better: (a: number, b: number) => boolean): TurnInput {
   const options = reachable(spec);
   let chosen = options[0] ?? null;
@@ -29,10 +48,12 @@ function best(spec: InputSpec, better: (a: number, b: number) => boolean): TurnI
 }
 
 export const cheapestReachable: Policy = {
+  prepare: (spec) => prepareWith(spec, (values) => Math.min(...values)),
   commit: (spec) => best(spec, (a, b) => a < b),
 };
 
 export const dearestReachable: Policy = {
+  prepare: (spec) => prepareWith(spec, (values) => Math.max(...values)),
   commit: (spec) => best(spec, (a, b) => a > b),
 };
 
@@ -46,7 +67,14 @@ export function randomPolicy(rng: Rng): Policy {
     prepare(spec) {
       const values: Record<string, InputValue> = {};
       for (const field of spec.prepare) {
-        if (field.enabled) values[field.mechanic] = rng.next() < 0.5;
+        if (!field.enabled) continue;
+        if (field.kind === 'pickOne' && field.choices && field.choices.length > 0) {
+          values[field.mechanic] = rng.pick(field.choices).value;
+        } else if (field.kind === 'toggle') {
+          values[field.mechanic] = rng.next() < 0.5;
+        } else {
+          values[field.mechanic] = rng.int(field.min ?? 0, field.max ?? 0);
+        }
       }
       return values;
     },

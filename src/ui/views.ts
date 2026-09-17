@@ -1,7 +1,7 @@
 import type { AssembledGame } from '../assembler/assemble';
 import { FRAME_LINES, type TeachDelta } from '../assembler/teach';
 import type { GameEvent } from '../frame/events';
-import type { InputSpec, Prize } from '../frame/types';
+import type { InputField, InputSpec, InputValue, Prize } from '../frame/types';
 import type { PrizeResolution } from '../frame/resolve';
 import type { MutationOption } from '../game/mutate';
 import { classes, escape, html, list, seconds } from './dom';
@@ -11,7 +11,8 @@ export interface Draft {
   prize: string | null;
   pass: boolean;
   amounts: Record<string, number>;
-  prepared: Record<string, boolean>;
+  /** Answered prepare questions: a die face, or yes/no. */
+  prepared: Record<string, InputValue>;
 }
 
 export interface SetupDraft {
@@ -22,7 +23,12 @@ export interface SetupDraft {
 
 /* ------------------------------------------------------------------ setup */
 
-export function setupView(draft: SetupDraft, openers: AssembledGame[]): string {
+export function setupView(
+  draft: SetupDraft,
+  openers: AssembledGame[],
+  log: { games: number; rounds: number; turns: number },
+  confirmClear = false,
+): string {
   return html`
     <section class="screen screen--setup">
       <h1>House Rules</h1>
@@ -47,14 +53,17 @@ export function setupView(draft: SetupDraft, openers: AssembledGame[]): string {
       <div class="panel">
         <h2>How long?</h2>
         <div class="row">
-          ${[4, 6, 8, 10].map(
+          ${[6, 8, 10, 12].map(
             (turns) => html`
               <button class="${classes('chip', draft.maxTurns === turns && 'chip--on')}"
                       data-action="turns" data-turns="${turns}">${turns} turns</button>
             `,
           )}
         </div>
-        <p class="hint">You can call time early at any point.</p>
+        <p class="hint">
+          Enough turns to work the game out matters more than hitting two minutes.
+          You can call time early at any point.
+        </p>
       </div>
 
       <div class="panel">
@@ -65,6 +74,9 @@ export function setupView(draft: SetupDraft, openers: AssembledGame[]): string {
               <button class="${classes('option', draft.opener === game.ids.join(',') && 'option--on')}"
                       data-action="opener" data-ids="${game.ids.join(',')}">
                 <span class="option__name">${escape(game.name)}</span>
+                ${game.minRecommendedPlayers > draft.names.length
+                  ? html`<span class="option__note">Played better with ${game.minRecommendedPlayers}+ so far</span>`
+                  : ''}
                 <span class="option__lines">
                   ${game.teach.map((block) => html`<span>${escape(block.teach)}</span>`)}
                 </span>
@@ -75,6 +87,21 @@ export function setupView(draft: SetupDraft, openers: AssembledGame[]): string {
       </div>
 
       <button class="primary" data-action="start">Start</button>
+
+      <div class="panel panel--log">
+        <h2>Playtest log</h2>
+        <p class="hint">
+          ${log.games} game${log.games === 1 ? '' : 's'}, ${log.rounds} round${log.rounds === 1 ? '' : 's'},
+          ${log.turns} turn${log.turns === 1 ? '' : 's'} recorded so far. It keeps going across games,
+          mutations and player counts until you clear it.
+        </p>
+        <div class="row">
+          <button data-action="download-log" ${log.turns === 0 ? 'disabled' : ''}>Download</button>
+          <button class="danger" data-action="clear-log" ${log.turns === 0 ? 'disabled' : ''}>
+            ${confirmClear ? 'Really clear it?' : 'Clear'}
+          </button>
+        </div>
+      </div>
     </section>
   `;
 }
@@ -169,7 +196,12 @@ function turnEvents(session: Session): GameEvent[] {
   return round.log.all().filter((event) => 'turn' in event && event.turn === round.turn);
 }
 
-function numberPanel(session: Session, spec: InputSpec): string {
+function prepareAnswer(field: InputField, value: InputValue | undefined): string {
+  if (field.kind === 'pickOne') return `Taking ${String(value)}.`;
+  return value ? 'Done.' : 'Kept.';
+}
+
+function numberPanel(session: Session, spec: InputSpec, pending: boolean): string {
   if (spec.strengthParts.length === 0 && spec.strength === 0) return '';
   const changes = turnEvents(session).filter(
     (event): event is Extract<GameEvent, { t: 'numberChanged' }> =>
@@ -177,15 +209,19 @@ function numberPanel(session: Session, spec: InputSpec): string {
   );
   const busted = changes.some((change) => change.note === 'bust');
 
+  const rolled = spec.strengthParts.filter((part) => part.parts.length > 1);
+
   return html`
     <div class="${classes('panel', 'panel--number', busted && 'panel--bust')}">
-      <p class="label">Your number</p>
-      <p class="big">${spec.strength}</p>
-      ${spec.strengthParts
-        .filter((part) => part.parts.length > 1)
-        .map(
-          (part) => html`<p class="hint">${escape(session.mechanicName(part.source))}: ${part.parts.join(' + ')}</p>`,
-        )}
+      <p class="label">${pending && !busted ? 'Your roll' : 'Your number'}</p>
+      ${pending && !busted
+        ? html`<p class="big">${rolled.flatMap((part) => part.parts).join(' &middot; ')}</p>`
+        : html`<p class="big">${spec.strength}</p>`}
+      ${pending || rolled.length === 0
+        ? ''
+        : rolled.map(
+            (part) => html`<p class="hint">${escape(session.mechanicName(part.source))} of ${part.parts.join(', ')}</p>`,
+          )}
       ${busted
         ? html`<p class="bust">Doubles. You're out of this turn.</p>`
         : changes.length > 0
@@ -221,7 +257,7 @@ export function commitView(session: Session, draft: Draft): string {
       <p class="eyebrow">Turn ${round.turn} of ${session.maxTurns} &middot; ${points} points</p>
       <h1>${escape(seat.name)}</h1>
 
-      ${numberPanel(session, spec)}
+      ${numberPanel(session, spec, pending.length > 0)}
 
       ${cards.length > 0
         ? html`<p class="holdings">You hold: ${cards.map((card) => html`<span class="pill">${escape(card.symbol)}</span>`)}</p>`
@@ -231,21 +267,44 @@ export function commitView(session: Session, draft: Draft): string {
         (field) => html`
           <div class="panel">
             <p class="label">${escape(field.label)}</p>
-            ${field.enabled
-              ? draft.prepared[field.mechanic] === undefined
-                ? html`
-                    <div class="row">
-                      <button data-action="prepare" data-mechanic="${field.mechanic}" data-value="yes">Yes</button>
-                      <button data-action="prepare" data-mechanic="${field.mechanic}" data-value="no">No</button>
-                    </div>
-                  `
-                : html`<p class="hint">${draft.prepared[field.mechanic] ? 'Done.' : 'Kept.'}</p>`
-              : html`<p class="hint">${escape(field.note ?? 'Not available')}</p>`}
+            ${!field.enabled
+              ? html`<p class="hint">${escape(field.note ?? 'Not available')}</p>`
+              : draft.prepared[field.mechanic] !== undefined
+                ? html`<p class="hint">${prepareAnswer(field, draft.prepared[field.mechanic])}</p>`
+                : field.kind === 'pickOne'
+                  ? html`
+                      <div class="row">
+                        ${(field.choices ?? []).map(
+                          (choice, index) => html`
+                            <button class="die" data-action="prepare" data-mechanic="${field.mechanic}"
+                                    data-value="${choice.value}" data-index="${index}">
+                              ${escape(choice.label)}
+                            </button>
+                          `,
+                        )}
+                      </div>
+                    `
+                  : html`
+                      <div class="row">
+                        <button data-action="prepare" data-mechanic="${field.mechanic}" data-value="yes">Yes</button>
+                        <button data-action="prepare" data-mechanic="${field.mechanic}" data-value="no">No</button>
+                      </div>
+                    `}
           </div>
         `,
       )}
 
-      ${pending.length > 0 ? html`<p class="hint">Answer that first.</p>` : ''}
+      ${pending.length > 0
+        ? html`
+            <div class="panel panel--offers">
+              <p class="label">On offer this turn</p>
+              <ul class="offers">
+                ${spec.prizes.map((option) => html`<li>${prizeLine(option.prize)}</li>`)}
+              </ul>
+              <p class="hint">Answer the question above, then pick.</p>
+            </div>
+          `
+        : ''}
 
       ${pending.length > 0 ? '' : spec.commit.map(
         (field) => html`
@@ -417,10 +476,10 @@ function standingsStrip(session: Session): string {
 }
 
 export function resultsView(session: Session): string {
-  const record = session.record.rounds.at(-1);
+  const record = session.lastRound;
   const round = session.round;
   if (!record || !round) return '';
-  const winners = record.winners.map((id) => session.nameOf(id));
+  const winners = record.winners.map((id: string) => session.nameOf(id));
 
   return html`
     <section class="screen">
@@ -448,7 +507,7 @@ export function resultsView(session: Session): string {
       </div>
 
       <button class="primary" data-action="mutate">Change the game</button>
-      <button class="quiet" data-action="download-log">Download the playtest log</button>
+      <button class="quiet" data-action="setup">Start a different game</button>
     </section>
   `;
 }
@@ -466,6 +525,9 @@ export function mutateView(session: Session, options: MutationOption[]): string 
           (option, index) => html`
             <button class="option" data-action="apply-mutation" data-index="${index}">
               <span class="option__name">${escape(option.label)}</span>
+              ${option.game.minRecommendedPlayers > session.seats.length
+                ? html`<span class="option__note">Played better with ${option.game.minRecommendedPlayers}+ so far</span>`
+                : ''}
               <span class="option__lines">
                 ${option.delta.gone.map((block) => html`<span class="gone">GONE: ${escape(block.heading)}</span>`)}
                 ${option.delta.added.map(
@@ -480,7 +542,7 @@ export function mutateView(session: Session, options: MutationOption[]): string 
           `,
         )}
       </div>
-      <button data-action="download-log">Download the playtest log</button>
+      <button class="quiet" data-action="setup">Start a different game instead</button>
     </section>
   `;
 }

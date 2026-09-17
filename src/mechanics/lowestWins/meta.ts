@@ -12,6 +12,8 @@ export const lowestWinsMeta: MechanicMeta = {
   input: null,
   // Removing it puts a frame rule back without any teach text of its own.
   onRemoveLine: 'Highest number wins again.',
+  // Avoiding one opponent's number is a guess; avoiding three is a game.
+  minRecommendedPlayers: 3,
   conflicts: [],
   priority: 50,
 };

@@ -3,26 +3,32 @@
 exports[`Dice Market Matches > play > plays out exactly as recorded 1`] = `
 "== dice + market + threeOfAKind | seed golden-1 | p1, p2, p3
 -- turn 1
-   p1 dice 8 [6,2]
-   p2 dice 7 [4,3]
-   p3 dice 9 [4,5]
-   offer t1p0 Leaf (needs 10)
-   offer t1p1 Moon (needs 5)
-   offer t1p2 Star (needs 9)
-   p1 claims t1p1 with 8
-   p2 claims t1p1 with 7
-   p3 claims t1p1 with 9
+   p1 dice rolled [6,2]
+   p2 dice rolled [4,3]
+   p3 dice rolled [4,5]
+   offer t1p0 Leaf (needs 6)
+   offer t1p1 Moon (needs 2)
+   offer t1p2 Star (needs 5)
+   p1 dice takes 2 from [6,2]
+   p2 dice takes 3 from [4,3]
+   p3 dice takes 4 from [4,5]
+   p1 claims t1p1 with 2
+   p2 claims t1p1 with 3
+   p3 claims t1p1 with 4
    t1p0 unwon (noClaims)
-   p3 WINS t1p1 with 9
+   p3 WINS t1p1 with 4
    p3 takes Moon
    t1p2 unwon (noClaims)
 -- turn 2
-   p1 dice 4 [2,2]
-   p2 dice 2 [1,1]
-   p3 dice 3 [1,2]
-   offer t2p0 Moon (needs 8)
-   offer t2p1 Leaf (needs 9)
-   offer t2p2 Star (needs 5)
+   p1 dice rolled [2,2]
+   p2 dice rolled [1,1]
+   p3 dice rolled [1,2]
+   offer t2p0 Moon (needs 4)
+   offer t2p1 Leaf (needs 5)
+   offer t2p2 Star (needs 3)
+   p1 dice takes 2 from [2,2]
+   p2 dice takes 1 from [1,1]
+   p3 dice takes 1 from [1,2]
    p1 passes
    p2 passes
    p3 passes
@@ -30,59 +36,71 @@ exports[`Dice Market Matches > play > plays out exactly as recorded 1`] = `
    t2p1 unwon (noClaims)
    t2p2 unwon (noClaims)
 -- turn 3
-   p1 dice 6 [2,4]
-   p2 dice 10 [4,6]
-   p3 dice 12 [6,6]
-   offer t3p0 Star (needs 8)
-   offer t3p1 Moon (needs 7)
-   offer t3p2 Leaf (needs 4)
-   p1 claims t3p2 with 6
-   p2 claims t3p2 with 10
-   p3 claims t3p2 with 12
+   p1 dice rolled [2,4]
+   p2 dice rolled [4,6]
+   p3 dice rolled [6,6]
+   offer t3p0 Star (needs 5)
+   offer t3p1 Moon (needs 4)
+   offer t3p2 Leaf (needs 2)
+   p1 dice takes 2 from [2,4]
+   p2 dice takes 4 from [4,6]
+   p3 dice takes 6 from [6,6]
+   p1 claims t3p2 with 2
+   p2 claims t3p2 with 4
+   p3 claims t3p2 with 6
    t3p0 unwon (noClaims)
    t3p1 unwon (noClaims)
-   p3 WINS t3p2 with 12
+   p3 WINS t3p2 with 6
    p3 takes Leaf
 -- turn 4
-   p1 dice 10 [6,4]
-   p2 dice 6 [3,3]
-   p3 dice 7 [5,2]
-   offer t4p0 Leaf (needs 5)
-   offer t4p1 Star (needs 9)
-   offer t4p2 Moon (needs 7)
-   p1 claims t4p0 with 10
-   p2 claims t4p0 with 6
-   p3 claims t4p0 with 7
-   p1 WINS t4p0 with 10
+   p1 dice rolled [6,4]
+   p2 dice rolled [3,3]
+   p3 dice rolled [5,2]
+   offer t4p0 Leaf (needs 3)
+   offer t4p1 Star (needs 6)
+   offer t4p2 Moon (needs 4)
+   p1 dice takes 4 from [6,4]
+   p2 dice takes 3 from [3,3]
+   p3 dice takes 2 from [5,2]
+   p1 claims t4p0 with 4
+   p2 claims t4p0 with 3
+   p3 passes
+   p1 WINS t4p0 with 4
    p1 takes Leaf
    t4p1 unwon (noClaims)
    t4p2 unwon (noClaims)
 -- turn 5
-   p1 dice 6 [5,1]
-   p2 dice 10 [4,6]
-   p3 dice 9 [3,6]
-   offer t5p0 Leaf (needs 8)
-   offer t5p1 Moon (needs 5)
-   offer t5p2 Star (needs 6)
-   p1 claims t5p1 with 6
-   p2 claims t5p1 with 10
-   p3 claims t5p1 with 9
+   p1 dice rolled [5,1]
+   p2 dice rolled [4,6]
+   p3 dice rolled [3,6]
+   offer t5p0 Leaf (needs 5)
+   offer t5p1 Moon (needs 2)
+   offer t5p2 Star (needs 4)
+   p1 dice takes 1 from [5,1]
+   p2 dice takes 4 from [4,6]
+   p3 dice takes 3 from [3,6]
+   p1 passes
+   p2 claims t5p1 with 4
+   p3 claims t5p1 with 3
    t5p0 unwon (noClaims)
-   p2 WINS t5p1 with 10
+   p2 WINS t5p1 with 4
    p2 takes Moon
    t5p2 unwon (noClaims)
 -- turn 6
-   p1 dice 3 [2,1]
-   p2 dice 6 [2,4]
-   p3 dice 7 [4,3]
-   offer t6p0 Star (needs 8)
-   offer t6p1 Leaf (needs 6)
-   offer t6p2 Moon (needs 7)
+   p1 dice rolled [2,1]
+   p2 dice rolled [2,4]
+   p3 dice rolled [4,3]
+   offer t6p0 Star (needs 5)
+   offer t6p1 Leaf (needs 3)
+   offer t6p2 Moon (needs 4)
+   p1 dice takes 1 from [2,1]
+   p2 dice takes 2 from [2,4]
+   p3 dice takes 3 from [4,3]
    p1 passes
-   p2 claims t6p1 with 6
-   p3 claims t6p1 with 7
+   p2 passes
+   p3 claims t6p1 with 3
    t6p0 unwon (noClaims)
-   p3 WINS t6p1 with 7
+   p3 WINS t6p1 with 3
    p3 takes Leaf
    t6p2 unwon (noClaims)
 == end (turnCap) 1. p1 0  1. p2 0  1. p3 0"

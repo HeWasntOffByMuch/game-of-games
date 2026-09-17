@@ -34,7 +34,9 @@ export const market = defineMechanic<MarketParams, Record<string, never>>({
   meta: marketMeta,
   defaultParams: {
     offers: 3,
-    prices: [4, 5, 6, 7, 8, 9, 10],
+    // Retuned for a chosen die (1-6) rather than a 2d6 total. A price is
+    // something you can hit exactly, which is what makes Lowest Wins bite.
+    prices: [2, 3, 4, 5, 6],
     // Three symbols and three offers means every symbol is on sale every
     // turn, at a price that changes. That makes the denial race legible -
     // you can always see which card someone needs - and makes Three of a

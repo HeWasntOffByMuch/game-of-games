@@ -61,6 +61,17 @@ each other; they declare what they provide and consume, and the assembler works
 out how they connect, rejects combinations that do not, and generates the rules
 text.
 
+**Randomness perturbs decisions; it does not replace them.** Dice rolls two and
+asks which one you commit, with the prices in front of you. A rolled total is an
+outcome; a rolled pair is a question. That change came straight out of the first
+playtest, where a summed roll made games more random without making them more
+interesting.
+
+**Holding together is not the same as being good.** The assembler can tell you a
+combination is connected, coherent, teachable and reproducible. It cannot tell you
+there is anything worth deciding. Only people can, which is what
+`docs/PLAYTEST.md` is for.
+
 **The point is what falls out.** Pot + Bidding + Lowest Wins is a
 lowest-unique-bid game, and nothing in the catalogue mentions uniqueness:
 

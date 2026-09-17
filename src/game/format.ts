@@ -16,10 +16,16 @@ export function formatEvent(event: GameEvent): string | null {
         event.prize.minStrength === undefined ? '' : ` (needs ${event.prize.minStrength})`
       }`;
     case 'number':
-      return `   ${event.player} ${event.source} ${event.value}${
-        event.parts.length > 1 ? ` [${event.parts.join(',')}]` : ''
-      }`;
+      // A value of 0 with several parts means "rolled, not yet chosen".
+      return event.value === 0 && event.parts.length > 1
+        ? `   ${event.player} ${event.source} rolled [${event.parts.join(',')}]`
+        : `   ${event.player} ${event.source} ${event.value}${
+            event.parts.length > 1 ? ` [${event.parts.join(',')}]` : ''
+          }`;
     case 'numberChanged':
+      if (event.from === 0 && event.to > 0 && event.parts.length > 1) {
+        return `   ${event.player} ${event.source} takes ${event.to} from [${event.parts.join(',')}]`;
+      }
       return `   ${event.player} ${event.source} ${event.from} -> ${event.to}${
         event.parts.length > 1 ? ` [${event.parts.join(',')}]` : ''
       }${event.note ? ` (${event.note})` : ''}`;

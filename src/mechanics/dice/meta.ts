@@ -3,14 +3,16 @@ import type { MechanicMeta } from '../../grammar/ports';
 export const diceMeta: MechanicMeta = {
   id: 'dice',
   name: 'Dice',
-  teach: 'Everyone rolls two dice at the start of each turn.',
-  tip: 'Aim low rolls at prizes nobody else wants.',
+  teach: 'Roll two dice. Choose one as your number.',
+  tip: 'The bigger die is not always the better one.',
   roles: ['contest'],
   provides: [{ type: 'number', attrs: { random: true } }],
-  numberNoun: 'dice',
   consumes: [],
   hooks: ['turnStart'],
-  input: null,
+  // The roll is random; the number is chosen. That is the whole point of the
+  // mechanic after the first playtest (finding 1).
+  input: { kind: 'pickOne', phase: 'prepare', hidden: false },
+  numberNoun: 'die',
   conflicts: [],
   priority: 10,
 };

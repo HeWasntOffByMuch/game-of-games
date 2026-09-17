@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { assembleOrThrow } from '../../src/assembler/assemble';
 import { mechanicEdges } from '../../src/grammar/edges';
+import { hasDecision } from '../../src/assembler/rules';
 import { CATALOGUE } from '../../src/mechanics/catalogue';
 import { createGame } from '../../src/game/createGame';
 import { formatLog } from '../../src/game/format';
@@ -79,8 +80,14 @@ describe('Lowest Unique Bid', () => {
       expect(assembleOrThrow(['pot', 'bidding', 'lowestWins'], CATALOGUE).ids).toEqual(IDS);
     });
 
-    it('is rejected without Bidding, because the Pot alone plays itself', () => {
-      expect(() => assembleOrThrow(['dice', 'pot'], CATALOGUE)).toThrow(/R7/);
+    it('is offerable with Dice instead of Bidding, which is not the same as good', () => {
+      // Dice now asks which face to commit, so Dice + Pot has a decision and
+      // passes every static rule. Whether choosing a die against one growing
+      // pot is *interesting* is a question only a playtest answers - passing
+      // validation is not evidence of a good game.
+      const game = assembleOrThrow(['dice', 'pot'], CATALOGUE);
+      expect(game.ids).toEqual(['dice', 'pot']);
+      expect(hasDecision(game.metas)).toBe(true);
     });
   });
 

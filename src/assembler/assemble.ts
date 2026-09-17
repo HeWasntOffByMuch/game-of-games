@@ -14,6 +14,11 @@ export interface AssembledGame {
   teach: TeachBlock[];
   budget: TeachBudget;
   name: string;
+  /**
+   * Advice from playtests, not a rule: the largest minimum any selected
+   * mechanic asks for. The assembler never rejects a game for being below it.
+   */
+  minRecommendedPlayers: number;
 }
 
 export type AssembleResult =
@@ -65,6 +70,7 @@ export function assemble(
       teach,
       budget: measure(teach),
       name: metas.map((m) => m.name).join(' + '),
+      minRecommendedPlayers: Math.max(2, ...metas.map((m) => m.minRecommendedPlayers ?? 2)),
     },
   };
 }

@@ -13,6 +13,8 @@ export const biddingMeta: MechanicMeta = {
   input: { kind: 'pickAmount', phase: 'commit', hidden: true },
   // Bidding costs something, so passing with a bid of 0 is a real choice.
   costlyEntry: true,
+  // Two players read each other too easily; the first playtest went solvable.
+  minRecommendedPlayers: 3,
   conflicts: [],
   priority: 20,
 };

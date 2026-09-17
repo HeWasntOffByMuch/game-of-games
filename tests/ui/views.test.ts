@@ -23,9 +23,9 @@ const emptyDraft = (): Draft => ({ prize: null, pass: false, amounts: {}, prepar
 /** HTML collapses whitespace; assertions should too. */
 const flat = (markup: string): string => markup.replace(/\s+/g, ' ');
 
-function session(ids = ['dice', 'market', 'threeOfAKind'], maxTurns = 2): Session {
+function session(ids = ['dice', 'market', 'threeOfAKind'], maxTurns = 2, seed = 'views'): Session {
   let time = 0;
-  const made = new Session({ seed: 'views', now: () => (time += 1000) });
+  const made = new Session({ seed, now: () => (time += 1000) });
   made.start(SEATS, ids, maxTurns);
   return made;
 }
@@ -79,27 +79,67 @@ describe('screens', () => {
   });
 
   describe('the private commit panel', () => {
-    it('will not let a player pick before answering a prepare question', () => {
+    it('will not let a player pick before answering every prepare question', () => {
       const made = session(['dice', 'market', 'threeOfAKind', 'reroll'], 2);
       made.beginPlay();
       made.takeSeat();
 
+      // Reroll is asked first, because it replaces the dice being chosen from.
+      const spec = made.round!.specFor('p1');
+      expect(spec.prepare.map((field) => field.mechanic)).toEqual(['reroll', 'dice']);
+
       const before = commitView(made, emptyDraft());
       expect(before).toContain('Reroll?');
-      expect(before).toContain('Answer that first.');
+      expect(before).toContain('On offer this turn');
       expect(before).not.toContain('Pick a prize');
       expect(flat(before)).toContain('data-action="lock-in" disabled');
 
-      const after = commitView(made, { ...emptyDraft(), prepared: { reroll: false } });
+      // Answering only the reroll is not enough: the die is still unchosen.
+      const half = commitView(made, { ...emptyDraft(), prepared: { reroll: false } });
+      expect(half).toContain('Which die is your number?');
+      expect(half).not.toContain('Pick a prize');
+
+      const face = spec.prepare[1]?.choices?.[0]?.value as number;
+      made.applyPrepare('dice', face);
+      const after = commitView(made, { ...emptyDraft(), prepared: { reroll: false, dice: face } });
       expect(after).toContain('Pick a prize');
+      expect(after).toContain(`Taking ${face}.`);
+    });
+
+    it('offers each rolled face as its own button', () => {
+      const made = session(['dice', 'market', 'threeOfAKind'], 2);
+      made.beginPlay();
+      made.takeSeat();
+      const faces = made.round!.specFor('p1').prepare[0]?.choices ?? [];
+      const view = flat(commitView(made, emptyDraft()));
+      expect(faces).toHaveLength(2);
+      for (const face of faces) {
+        expect(view).toContain(`data-action="prepare" data-mechanic="dice" data-value="${face.value}"`);
+      }
+      // The roll is shown, but it is not a number until one is chosen.
+      expect(view).toContain('Your roll');
+      expect(view).not.toContain('Your number');
+      // And the prizes are visible while choosing, or the choice is blind.
+      const prices = made.round!.specFor('p1').prizes.map((o) => o.prize.minStrength);
+      for (const price of prices) expect(view).toContain(`needs ${price}`);
     });
 
     it('marks a prize the player cannot reach as unpickable', () => {
-      const made = session();
-      made.beginPlay();
-      made.takeSeat();
+      // Find a roll that cannot afford everything on offer; with a low die and
+      // prices up to six, that is common but not guaranteed at any one seed.
+      let made = session();
+      for (let attempt = 0; attempt < 40; attempt += 1) {
+        made = session(['dice', 'market', 'threeOfAKind'], 2, `reach${attempt}`);
+        made.beginPlay();
+        made.takeSeat();
+        const faces = made.round!.specFor('p1').prepare[0]?.choices ?? [];
+        made.applyPrepare('dice', Math.min(...faces.map((choice) => choice.value)));
+        if (made.round!.specFor('p1').prizes.some((option) => !option.reachable)) break;
+      }
+      const face = made.round!.specFor('p1').strength;
+
       const spec = made.round!.specFor('p1');
-      const view = flat(commitView(made, emptyDraft()));
+      const view = flat(commitView(made, { ...emptyDraft(), prepared: { dice: face } }));
       const unreachable = spec.prizes.filter((option) => !option.reachable);
       expect(unreachable.length).toBeGreaterThan(0);
       for (const option of unreachable) {
@@ -157,8 +197,38 @@ describe('screens', () => {
     const view = setupView(
       { names: ['Ada', 'Bo'], maxTurns: 8, opener: 'pot,bidding' },
       Session.openers(),
+      { games: 0, rounds: 0, turns: 0 },
     );
     expect(view).toContain('data-ids="pot,bidding"');
     expect(view).not.toContain('data-ids="dice,market"');
+  });
+
+  it('warns when an opener wants more players than are seated', () => {
+    const view = setupView(
+      { names: ['Ada', 'Bo'], maxTurns: 8, opener: 'pot,bidding' },
+      Session.openers(),
+      { games: 0, rounds: 0, turns: 0 },
+    );
+    expect(view).toContain('Played better with 3+ so far');
+  });
+
+  it('shows what the playtest log holds, and offers to clear it separately', () => {
+    const view = flat(
+      setupView(
+        { names: ['Ada', 'Bo'], maxTurns: 8, opener: 'pot,bidding' },
+        Session.openers(),
+        { games: 2, rounds: 5, turns: 34 },
+      ),
+    );
+    expect(view).toContain('2 games, 5 rounds, 34 turns recorded so far');
+    expect(view).toContain('data-action="download-log"');
+    expect(view).toContain('data-action="clear-log"');
+  });
+
+  it('asks twice before clearing', () => {
+    const draft = { names: ['Ada', 'Bo'], maxTurns: 8, opener: 'pot,bidding' };
+    const log = { games: 1, rounds: 1, turns: 4 };
+    expect(flat(setupView(draft, Session.openers(), log, false))).toContain('> Clear <');
+    expect(setupView(draft, Session.openers(), log, true)).toContain('Really clear it?');
   });
 });

@@ -4,7 +4,7 @@ import { mechanicEdges } from '../../src/grammar/edges';
 import { CATALOGUE } from '../../src/mechanics/catalogue';
 import { createGame } from '../../src/game/createGame';
 import { formatLog } from '../../src/game/format';
-import { cheapestReachable, dearestReachable, playGame } from './play';
+import { cheapestReachable, collector, dearestReachable, playGame } from './play';
 
 const IDS = ['dice', 'market', 'threeOfAKind'];
 
@@ -13,6 +13,8 @@ const PLAYERS = [
   { id: 'p2', name: 'Bo' },
   { id: 'p3', name: 'Cy' },
 ];
+
+const COLLECTING = collector({ p1: 'Moon', p2: 'Star', p3: 'Leaf' });
 
 describe('Dice Market Matches', () => {
   describe('composition', () => {
@@ -40,8 +42,8 @@ describe('Dice Market Matches', () => {
         {
           mechanic: 'dice',
           heading: 'DICE',
-          teach: 'Everyone rolls two dice at the start of each turn.',
-          connection: 'Your dice total is your number.',
+          // No connection line: the teach line already says "your number".
+          teach: 'Roll two dice. Choose one as your number.',
         },
         {
           mechanic: 'market',
@@ -103,7 +105,7 @@ describe('Dice Market Matches', () => {
     it('scores 5 for three matching symbols and takes the cards back', () => {
       const { round } = playGame(
         { seed: 'matches', ids: IDS, players: PLAYERS, maxTurns: 10 },
-        cheapestReachable,
+        COLLECTING,
       );
       const scores = round.log.ofType('points');
       expect(scores.length).toBeGreaterThan(0);
@@ -120,7 +122,7 @@ describe('Dice Market Matches', () => {
     it('never leaves a completed match sitting in a hand', () => {
       const { round } = playGame(
         { seed: 'hands', ids: IDS, players: PLAYERS, maxTurns: 10 },
-        cheapestReachable,
+        COLLECTING,
       );
       for (const player of round.players) {
         const counts = new Map<string, number>();

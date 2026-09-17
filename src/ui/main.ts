@@ -1,5 +1,5 @@
 import type { TurnInput } from '../frame/types';
-import { save, toJsonl } from '../playtest/log';
+import { PlaytestLog } from '../playtest/log';
 import { Session } from './session';
 import {
   commitView,
@@ -16,8 +16,13 @@ import {
 const root = document.getElementById('app');
 if (!root) throw new Error('No #app element');
 
-const session = new Session();
+// One accumulating record for the whole sitting. It survives a refresh, and
+// nothing but the tester's own "Clear" ever empties it.
+const log = PlaytestLog.restore(localStorage) ?? new PlaytestLog();
+const session = new Session({ log });
 const openers = Session.openers();
+
+let confirmClear = false;
 
 const setup: SetupDraft = {
   names: ['Ada', 'Bo', 'Cy'],
@@ -35,7 +40,7 @@ function render(): void {
   if (!root) return;
   switch (session.screen) {
     case 'setup':
-      root.innerHTML = setupView(setup, openers);
+      root.innerHTML = setupView(setup, openers, log.summary, confirmClear);
       break;
     case 'teach':
       root.innerHTML = teachView(session);
@@ -73,13 +78,14 @@ function currentInput(): TurnInput {
   return { prize: draft.pass ? null : draft.prize, values };
 }
 
+/** Downloading never clears the log: an accidental download must not lose data. */
 function downloadLog(): void {
-  const body = toJsonl(session.record);
+  const body = log.toJsonl();
   if (!body) return;
   const url = URL.createObjectURL(new Blob([body], { type: 'application/x-ndjson' }));
   const link = document.createElement('a');
   link.href = url;
-  link.download = `house-rules-${session.record.sessionId}.jsonl`;
+  link.download = `house-rules-${log.sessionId}.jsonl`;
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -111,9 +117,12 @@ const actions: Record<string, (target: HTMLElement) => void> = {
   },
   prepare: (target) => {
     const mechanic = target.dataset.mechanic ?? '';
-    const value = target.dataset.value === 'yes';
+    const raw = target.dataset.value ?? '';
+    const value: number | boolean =
+      raw === 'yes' ? true : raw === 'no' ? false : Number(raw);
     session.applyPrepare(mechanic, value);
     draft.prepared[mechanic] = value;
+    // The number just changed, so any earlier pick may no longer be reachable.
     draft.prize = null;
     draft.pass = false;
   },
@@ -141,11 +150,24 @@ const actions: Record<string, (target: HTMLElement) => void> = {
   mutate: () => {
     session.openMutations();
   },
+  setup: () => {
+    session.returnToSetup();
+  },
   'apply-mutation': (target) => {
     const option = session.mutations()[Number(target.dataset.index)];
     if (option) session.applyMutation(option);
   },
   'download-log': downloadLog,
+  // Two taps, so a mis-click cannot destroy a sitting's evidence.
+  'clear-log': () => {
+    if (!confirmClear) {
+      confirmClear = true;
+      return;
+    }
+    confirmClear = false;
+    log.clear();
+    PlaytestLog.forget(localStorage);
+  },
 };
 
 root.addEventListener('click', (event) => {
@@ -153,10 +175,11 @@ root.addEventListener('click', (event) => {
   if (!target || target.hasAttribute('disabled')) return;
   const action = actions[target.dataset.action ?? ''];
   if (!action) return;
+  if (target.dataset.action !== 'clear-log') confirmClear = false;
   action(target);
   // A playtest is worth more than a tidy save path: keep the record current
   // after every action, so closing the laptop loses nothing.
-  if (session.record.rounds.length > 0) save(session.record, localStorage);
+  if (log.size > 0) log.save(localStorage);
   render();
 });
 

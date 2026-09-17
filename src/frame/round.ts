@@ -212,9 +212,12 @@ export class Round {
         : { prize, reachable, note: `Needs ${prize.minStrength}` };
     });
 
+    // Questions are asked in priority order, not the order mechanics were
+    // added: Reroll has to be answered before Dice asks which die you keep,
+    // because rerolling replaces the dice you would be choosing from.
     const prepare: InputField[] = [];
     const commit: InputField[] = [];
-    for (const slot of this.slots) {
+    for (const slot of this.dispatchOrder) {
       if (!slot.mechanic.inputFields) continue;
       const fields = this.withMechanic(slot, () =>
         slot.mechanic.inputFields?.(this.contextFor(slot), player) ?? [],

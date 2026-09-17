@@ -53,9 +53,14 @@ export type Comparison = 'highest' | 'lowest';
 export type InputValue = number | boolean;
 
 /** One thing a player is asked for this turn, besides picking a prize. */
+export interface InputChoice {
+  value: number;
+  label: string;
+}
+
 export interface InputField {
   mechanic: MechanicId;
-  kind: 'toggle' | 'pickAmount';
+  kind: 'toggle' | 'pickAmount' | 'pickOne';
   phase: 'prepare' | 'commit';
   /** Player-facing, e.g. "Reroll?" or "Bid". */
   label: string;
@@ -63,6 +68,8 @@ export interface InputField {
   /** pickAmount only. */
   min?: number;
   max?: number;
+  /** pickOne only: the values on offer, in the order to show them. */
+  choices?: InputChoice[];
   /** False when the mechanic has nothing to offer this player this turn. */
   enabled: boolean;
   /** Shown when disabled, e.g. "No points to bid". */

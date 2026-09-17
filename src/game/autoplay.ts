@@ -28,15 +28,32 @@ export function playGame(
   round.begin();
   while (!round.isOver) {
     for (const player of round.players) {
-      const chosen = policyFor(player.id);
-      const prepared = chosen.prepare?.(round.specFor(player.id), player.id) ?? {};
-      for (const [mechanic, value] of Object.entries(prepared)) {
-        round.applyPrepare(player.id, mechanic, value);
-      }
-      round.commit(player.id, chosen.commit(round.specFor(player.id), player.id));
+      answerPrepare(round, player.id, policyFor(player.id));
+      round.commit(player.id, policyFor(player.id).commit(round.specFor(player.id), player.id));
     }
     round.reveal();
     round.next();
   }
   return { round, assembled };
+}
+
+/**
+ * Answers prepare questions one at a time, re-reading the spec in between.
+ *
+ * They are asked in order for a reason: a reroll replaces the dice the next
+ * question is about. Deciding everything from one snapshot would answer the
+ * second question about dice that no longer exist - which is exactly what the
+ * UI avoids by re-rendering after each answer.
+ */
+function answerPrepare(round: Round, player: PlayerId, policy: Policy): void {
+  const answered = new Set<string>();
+  for (;;) {
+    const spec = round.specFor(player);
+    const next = spec.prepare.find((field) => field.enabled && !answered.has(field.mechanic));
+    if (!next) return;
+    answered.add(next.mechanic);
+    const value = policy.prepare?.(spec, player)?.[next.mechanic];
+    if (value === undefined) continue;
+    round.applyPrepare(player, next.mechanic, value);
+  }
 }

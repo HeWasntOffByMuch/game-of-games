@@ -19,8 +19,17 @@ One laptop, 3-4 players sitting round it, someone facilitating. 2-6 works; 3-4 i
 the sweet spot for the first sessions.
 
 On the setup screen: put in real names, choose a round length (8 turns is the
-default; 4 is a good warm-up), and pick a game to start with. Any listed opener
-is a valid game - the assembler will not offer one that does not work.
+default), and pick a game to start with. Any listed opener holds together
+structurally - which is not the same as being interesting. Finding out which ones
+*are* interesting is the whole point of the session.
+
+Some openers are marked "Played better with 3+ so far". That is a note from an
+earlier playtest, not a rule: you can still play them with two, and if they are
+fine with two we want to know.
+
+**The first session was 2 players. What we most need now is 3 and 4.** Bidding and
+Lowest Wins both went narrow with two players, and the guess is that they need
+several opponents to reason about. Play the same game at two counts if you can.
 
 Good openers to start from:
 
@@ -28,6 +37,10 @@ Good openers to start from:
 |---|---|
 | Dice + Market + Three of a Kind | add Reroll, then Lowest Wins, for "Just Enough" |
 | Pot + Bidding | add Lowest Wins, for lowest-unique-bid |
+
+Dice now rolls two and asks which one you commit, with the prices in view. Watch
+whether that choice is ever genuinely hard, or whether the bigger die is just
+always right.
 
 ## Running a round
 
@@ -50,6 +63,10 @@ that you used it.
 
 Do not ask these as questions. Watch for them.
 
+- **Is there a decision at all?** The sharpest finding from the first session was
+  that a game can be valid, connected, clear and reproducible and still have
+  nothing to decide. If a player's choice is obvious every turn, say so - that is
+  the most useful thing you can write down.
 - **Did they understand it?** Count how often someone asks "wait, what happens
   if…" on the first turn. Note which rule it was about.
 - **Do the mechanics feel connected?** Listen for people talking about one
@@ -64,29 +81,50 @@ Do not ask these as questions. Watch for them.
 - **Is choosing the mutation fun in itself?** Does the table enjoy the argument,
   or do they want to get back to playing?
 - **How long is a round really?** The log records it. A hot-seat round will be
-  longer than the two minutes v3 wants, because the laptop has to go round -
-  note whether it *felt* too long, which is the part that matters.
+  longer than the two minutes v3 wants, because the laptop has to go round - note
+  whether it *felt* too long, which is the part that matters. Do not read "that
+  game ended quickly" as "that game was well paced": a short game with nothing to
+  decide is just short.
 - **Does the vocabulary stick?** By the third game, is anyone still re-reading
   the Market card?
 
 ## The log
 
-Every round is recorded: mechanics, the mutation that produced them, turn and
-round durations, standings, and the optional ratings. "Download the playtest
-log" on the results or change-the-game screen saves it as JSON lines.
+**One log covers the whole sitting.** It keeps accumulating across rounds,
+mutations, different games and changes of player count, and it survives a page
+refresh. Play as many games as you like in one go, then download once at the end.
 
-Nothing is analysed automatically, on purpose. v3 describes a large
-simulation and materiality system; we are not building it until playtests tell
-us what is worth measuring (`docs/DECISIONS.md`, D2). Read the log alongside
-your notes.
+It is on the setup screen, which is where you pass through between games. It
+tells you how much it holds ("2 games, 5 rounds, 34 turns recorded so far").
 
-One line per round:
+- **Download** saves everything so far and *does not* clear it.
+- **Clear** is separate and asks twice. It is the only thing that empties the log.
+
+Nothing is analysed automatically, on purpose. v3 describes a large simulation and
+materiality system; we are not building it until playtests tell us what is worth
+measuring (`docs/DECISIONS.md`, D2). Read the log alongside your notes.
+
+The file is JSON lines, one event per line, in the order things happened:
+
+| Event | Carries |
+|---|---|
+| `sessionStart` | when the sitting began |
+| `gameStart` | game id, mechanics, player count and names, turn cap, recommended players |
+| `roundStart` | round id, the mechanics for *this* round, the seed, and the mutation that produced it |
+| `turn` | every player's prepare and commit answers, their number, what they went for, the frame's own events, standings, and how long the turn took |
+| `roundEnd` | turns played, real duration, why it ended, standings, winners |
+| `mutation` | the operator, what went in and out, and the rule delta taught |
+| `rating` | the fun and clarity taps, against the round they were given for |
+| `gameEnd` | the group left this game for a different one |
+
+Every event has `seq`, `at` and `sessionId`; everything inside a game shares a
+`gameId`, and everything inside a round shares a `roundId`, so it all regroups
+afterwards.
 
 ```json
-{"sessionId":"20260917T1543","round":2,"mechanics":["dice","market","threeOfAKind","reroll"],
- "gameName":"Dice + Market + Three of a Kind + Reroll","players":4,
- "mutation":{"op":"add","mechanic":"reroll"},"turnsPlayed":8,"endedBecause":"turnCap",
- "durationMs":214000,"turnDurationsMs":[31000,24000],"winners":["p2"],"fun":"up","clarity":4}
+{"seq":14,"at":"2026-09-17T19:42:03.000Z","sessionId":"20260917T194","t":"turn","gameId":"g1","roundId":"g1r2","turn":3,
+ "durationMs":31000,"players":[{"player":"p1","name":"Ada","prepare":{"reroll":false,"dice":3},"commit":{},
+ "prize":"t3p1","prizeLabel":"Star","strength":3,"points":5}],"events":[…],"standings":[…]}
 ```
 
 ## Afterwards

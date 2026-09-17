@@ -24,8 +24,15 @@ function playTurn(session: Session): void {
     expect(session.screen).toBe('handoff');
     session.takeSeat();
     expect(session.screen).toBe('commit');
-    const seat = session.currentSeat;
-    const spec = session.round!.specFor(seat!.id);
+    const seat = session.currentSeat!;
+
+    for (const field of session.round!.specFor(seat.id).prepare) {
+      if (!field.enabled) continue;
+      const first = field.choices?.[0]?.value;
+      session.applyPrepare(field.mechanic, field.kind === 'pickOne' ? (first ?? 0) : false);
+    }
+
+    const spec = session.round!.specFor(seat.id);
     const values: Record<string, number | boolean> = {};
     for (const field of spec.commit) values[field.mechanic] = field.min ?? 0;
     session.commit({ prize: spec.prizes.find((o) => o.reachable)?.prize.id ?? null, values });
@@ -80,24 +87,18 @@ describe('hot-seat session', () => {
     expect(session.round?.isOver).toBe(true);
   });
 
-  it('records the round for the playtest log', () => {
+  it('summarises the round just played for the results screen', () => {
     const session = started(['dice', 'market', 'threeOfAKind'], 1);
     session.beginPlay();
     playTurn(session);
     session.next();
 
-    const record = session.record.rounds[0];
-    expect(record).toMatchObject({
-      round: 1,
-      mechanics: ['dice', 'market', 'threeOfAKind'],
+    expect(session.lastRound).toMatchObject({
       gameName: 'Dice + Market + Three of a Kind',
-      players: 3,
-      mutation: null,
       turnsPlayed: 1,
       endedBecause: 'turnCap',
     });
-    expect(record?.durationMs).toBeGreaterThan(0);
-    expect(record?.turnDurationsMs).toHaveLength(1);
+    expect(session.lastRound?.durationMs).toBeGreaterThan(0);
   });
 
   it('keeps optional ratings against the round just played', () => {
@@ -106,7 +107,7 @@ describe('hot-seat session', () => {
     playTurn(session);
     session.next();
     session.rate({ fun: 'up', clarity: 4 });
-    expect(session.record.rounds[0]).toMatchObject({ fun: 'up', clarity: 4 });
+    expect(session.lastRound).toMatchObject({ fun: 'up', clarity: 4 });
   });
 
   it('can be stopped early and still produce a result', () => {
@@ -115,7 +116,7 @@ describe('hot-seat session', () => {
     playTurn(session);
     session.stop();
     expect(session.screen).toBe('results');
-    expect(session.record.rounds[0]?.endedBecause).toBe('stopped');
+    expect(session.lastRound?.endedBecause).toBe('stopped');
   });
 
   describe('mutating between rounds', () => {
@@ -164,7 +165,8 @@ describe('hot-seat session', () => {
       playTurn(session);
       session.next();
 
-      expect(session.record.rounds.map((r) => r.mutation)).toEqual([
+      const starts = session.log.all().filter((event) => event.t === 'roundStart');
+      expect(starts.map((event) => (event.t === 'roundStart' ? event.mutation : null))).toEqual([
         null,
         { op: 'add', mechanic: 'reroll' },
       ]);
@@ -180,8 +182,10 @@ describe('hot-seat session', () => {
       playTurn(session);
       session.next();
 
-      const [first, second] = session.record.rounds;
-      expect(first?.seed).not.toEqual(second?.seed);
+      const seeds = session.log
+        .all()
+        .flatMap((event) => (event.t === 'roundStart' ? [event.seed] : []));
+      expect(new Set(seeds).size).toBe(seeds.length);
     });
   });
 

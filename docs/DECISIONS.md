@@ -139,3 +139,80 @@ ordinary tests.
 ### D24. `roundEnd` reasons are `turnCap` and `stopped`
 v3's ending mechanics are deferred, so the second reason is a facilitator calling time
 during a playtest rather than a mechanic ending the round. The playtest log records which.
+
+## P1 — after the first human playtest (2 players)
+
+The playtest found that Dice made games *more random without making them more
+interesting*, that Bidding played better because the number itself was a decision,
+that Bidding went solvable with only two players, and — most importantly — that a
+game can pass every structural check and still contain no interesting decision.
+
+### D25. Dice rolls two dice and the player chooses one
+Was: two dice, summed, and the total is your number. Now: roll two, commit one.
+**Why:** randomness should perturb decisions, not replace them. A rolled total *is*
+the outcome; a rolled pair is a question. Against a price, under Lowest Wins, or
+with ties cancelling, the bigger die is frequently the wrong one.
+`count` is a parameter, so three dice can be tried without code changes, but two is
+the simplest version that creates the choice and is what ships.
+
+### D26. A `pickOne` input kind
+`pickAmount`'s min/max cannot express "2 or 5". Added `pickOne` with an explicit
+`choices` list. This is the smallest grammar change that lets a random result
+become a choice; nothing else about the grammar moved.
+
+### D27. Prepare questions are asked in priority order, and Reroll comes first
+Reroll's priority dropped below Dice's. It has no hooks, so priority now only
+orders the questions — and rerolling replaces the dice the next question is about.
+Autoplay was fixed to re-read the input spec between answers for the same reason;
+deciding both answers from one snapshot chose from dice that no longer existed.
+
+### D28. The die choice is made with the prizes in view
+The commit panel shows what is on offer, with prices, while the die question is
+open. Choosing blind is not the decision we are trying to test.
+
+### D29. Market prices retuned to 2–6
+A chosen die is 1–6, not a 2d6 total of 2–12. Checked across 40 seeds at 2, 3 and
+4 players: first points land at a median of turn 3–4. Still hand-tuned, still
+expected to change.
+
+### D30. Dice teaches itself and needs no connection line
+New teach line: "Roll two dice. Choose one as your number." It names "your number"
+itself, so the connection template that used to say "Your dice total is your
+number." was removed. **This is a deliberate deviation from v3's Worked Examples 1
+and 5**, whose teach text no longer matches; the examples describe the old Dice.
+
+### D31. `minRecommendedPlayers` is advice, not a rule
+Bidding and Lowest Wins declare 3. The assembler reports the maximum across a
+game's mechanics, and the UI shows "Played better with 3+ so far" on openers and
+mutation options. It never rejects anything.
+**Why:** it records what a playtest found, and says so in those words. It is not a
+balance claim, and there is no simulation behind it.
+
+### D32. Passing validation is not evidence of a good game
+Because Dice now has an input, `Dice + Pot` satisfies R7 and is offerable — a game
+we expect to be thin. That is left as it is, and the test that used to assert the
+rejection now asserts the opposite together with the reason. The static rules
+answer "does this hold together", never "is this worth playing"; only people
+answer the second question.
+
+### D33. Turn options are 6, 8, 10, 12; the 4-turn option is gone
+Enough decisions to understand a game matters more than hitting 120 seconds right
+now. Duration and turn count are still recorded separately, so pacing can be
+optimised once we know which games are worth pacing.
+
+### D34. The playtest log is an append-only event stream for a whole sitting
+Was: a list of round records for one game, replaced whenever a new session began.
+Now: one accumulating log of timestamped, sequence-numbered events spanning every
+game, mutation, player count and restart in a sitting.
+**Why:** a sitting is not a list of rounds. Events with ids can be grouped
+afterwards; a nested structure cannot be un-nested.
+- It survives a page refresh (restored from `localStorage`).
+- Nothing in the flow of play clears it — not a round ending, a mutation, a new
+  game, returning to setup, or downloading.
+- Only an explicit two-tap "Clear" empties it, kept separate from "Download" so a
+  mis-click cannot destroy a sitting's evidence.
+
+### D35. Returning to setup without ending the sitting
+There was previously no way out of the play loop. "Start a different game" goes
+back to setup, which is also how the player count changes mid-sitting. It emits a
+`gameEnd` event and keeps the log.

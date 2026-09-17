@@ -112,6 +112,14 @@ export class NumberPort {
     return this.forPlayer(player).reduce((sum, c) => sum + c.value, 0);
   }
 
+  /**
+   * Whether a modifier has replaced this player's whole number - a bust. The
+   * provider can then stop asking for input it would no longer use.
+   */
+  isOverridden(player: PlayerId): boolean {
+    return this.overrides.has(player);
+  }
+
   /** Whether any mechanic provided a number for this player this turn. */
   has(player: PlayerId): boolean {
     return this.overrides.has(player) || this.contributions.some((c) => c.player === player);
