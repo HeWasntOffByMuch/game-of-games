@@ -99,6 +99,16 @@ export interface MechanicMeta {
   input: PlayerInputDecl | null;
   /** Entering a contest costs something, so passing is a real decision (R7). */
   costlyEntry?: boolean;
+  /**
+   * Prize mechanics only: whether this offers more than one prize a turn, so
+   * that picking between them is itself a decision (R7).
+   */
+  multiplePrizes?: boolean;
+  /**
+   * A line for the delta screen when this mechanic is removed and a frame rule
+   * quietly goes back to normal, e.g. "Highest number wins again."
+   */
+  onRemoveLine?: string;
   conflicts: string[];
   /** Order within a hook point; lower runs first. */
   priority: number;
